@@ -1,0 +1,91 @@
+@startuml auth
+
+actor "Client" as ac
+actor "User" as au
+participant "Request handler" as rh
+participant "Authenticator<ClientService>" as auc
+participant "Issuer" as iss
+participant "UserService" as us
+participant "ClientService" as cs
+participant "AuthorizationCodeService" as acs
+participant "ClaimService" as cls
+
+note across
+    * Authenticator implemented with Generics or decorator pattern ?
+    * Authenticator Query arguments (InputCredentials or what)
+    * IssuedCredentials interface (will be JWT, Opaque token, ...)
+end note
+
+=== OAuth ==
+
+== /token authorization_code ==
+au -> rh ++ : /token
+rh -> rh : clientCredentials = NewClientSecretInput(req.client_id, req.client_secret)
+rh -> auc ++ : Authenticate(clientCredentials InputCredentials)
+auc -> cs ++ : Query(clientCredentials InputCredentials)
+return []StoredCredentials, error
+return clientPrincipal Principal, error
+rh -> cs ++ : Get(clientPrincipal.Subject)
+return client Client
+rh -> acs ++ : Get(client, req.code)
+acs -> acs : findByCode(code)
+acs -> acs : validateClientId(client.Id())
+acs -> acs : validateRedirectURI(client.RedirectURI())
+return authReq AuthorizationRequest, error
+rh -> cls ++ : GetUserClaims(authReq.GetUser() User,client Client,authReq.GetScope())
+return claims
+rh -> rh : userPrincipal.Subject = authReq.GetUser().Id()\nuserPrincipal.Attributes = claims\nissueParams.TTL = time.Hour * 1
+rh -> iss ++ : Issue(SchemeJWT Scheme,userPrincipal Principal,IssueParams)
+return IssuedCredentials, error
+return
+
+== /token client_credentials (client_secret) ==
+ac -> rh ++ : /token
+rh -> rh : clientCredentials = NewClientSecretInput(req.client_id, req.client_secret)
+rh -> auc ++ : Authenticate(clientCredentials InputCredentials)
+auc -> cs ++ : Query(clientCredentials InputCredentials)
+return []StoredCredentials, error
+return clientPrincipal Principal, error
+rh -> cs ++ : Get(clientPrincipal.Subject)
+return client Client
+rh -> cls ++ : GetClientClaims(client Client)
+return claims
+rh -> rh : clientPrincipal.Attributes = claims
+rh -> iss ++ : Issue(SchemeJWT Scheme,clientPrincipal Principal,IssueParams)
+return IssuedCredentials, error
+return JWT
+
+== /token client_credentials (mTLS) ==
+ac -> rh ++ : /token
+rh -> rh : clientCredentials = NewClientTLSInput(req.client_id, req.TLS)
+rh -> auc ++ : Authenticate(clientCredentials InputCredentials)
+auc -> cs ++ : Query(clientCredentials InputCredentials)
+return []StoredCredentials, error
+return clientPrincipal Principal, error
+rh -> cs ++ : Get(clientPrincipal.Subject)
+return client Client
+rh -> cls ++ : GetClientClaims(client Client)
+return claims
+rh -> rh : clientPrincipal.Attributes = claims
+rh -> iss ++ : Issue(SchemeJWT Scheme,clientPrincipal Principal,IssueParams)
+return IssuedCredentials, error
+return JWT
+
+=== SAML ==
+== SAML Request ==
+ac -> rh ++ : SAMLRequest
+rh -> rh : clientCredentials = NewSAMLRequestInput(req.SAMLRequest, req.SigAlg, req.Signature)
+rh -> auc ++ : Authenticate(clientCredentials InputCredentials)
+auc -> cs ++ : Query(clientCredentials InputCredentials)
+return []StoredCredentials, error
+return clientPrincipal Principal, error
+rh -> cs ++ : Get(clientPrincipal.Subject)
+return client Client
+rh -> cls ++ : GetClientClaims(client Client)
+return claims
+rh -> rh : clientPrincipal.Attributes = claims
+rh -> iss ++ : Issue(SchemeSAML Scheme,clientPrincipal Principal,IssueParams)
+return IssuedCredentials, error
+return SAMLResponse
+
+@enduml
