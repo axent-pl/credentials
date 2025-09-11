@@ -14,7 +14,7 @@ func TestClientSecretVerifier_Verify(t *testing.T) {
 	tests := []struct {
 		name    string
 		in      auth.InputCredentials
-		stored  []auth.StoredCredentials
+		stored  []auth.ValidationScheme
 		want    auth.Principal
 		wantErr bool
 	}{
@@ -24,7 +24,7 @@ func TestClientSecretVerifier_Verify(t *testing.T) {
 				ClientID:     "acme",
 				ClientSecret: validPassword,
 			},
-			stored: []auth.StoredCredentials{
+			stored: []auth.ValidationScheme{
 				auth.ClientSecretStored{
 					ClientID:   "acme",
 					SecretHash: validPasswordHash,
@@ -39,7 +39,7 @@ func TestClientSecretVerifier_Verify(t *testing.T) {
 				ClientID:     "acme",
 				ClientSecret: validPassword,
 			},
-			stored: []auth.StoredCredentials{
+			stored: []auth.ValidationScheme{
 				auth.ClientSecretStored{
 					ClientID:   "acme-other",
 					SecretHash: validPasswordHash,
@@ -54,7 +54,7 @@ func TestClientSecretVerifier_Verify(t *testing.T) {
 				ClientID:     "acme",
 				ClientSecret: "invalid password",
 			},
-			stored: []auth.StoredCredentials{
+			stored: []auth.ValidationScheme{
 				auth.ClientSecretStored{
 					ClientID:   "acme",
 					SecretHash: validPasswordHash,
@@ -66,7 +66,7 @@ func TestClientSecretVerifier_Verify(t *testing.T) {
 		{
 			name: "empty input credentials",
 			in:   auth.ClientSecretInput{},
-			stored: []auth.StoredCredentials{
+			stored: []auth.ValidationScheme{
 				auth.ClientSecretStored{
 					ClientID:   "acme",
 					SecretHash: validPasswordHash,
@@ -78,7 +78,7 @@ func TestClientSecretVerifier_Verify(t *testing.T) {
 		{
 			name: "invalid input credentials kind",
 			in:   auth.JWTInput{},
-			stored: []auth.StoredCredentials{
+			stored: []auth.ValidationScheme{
 				auth.ClientSecretStored{
 					ClientID:   "acme",
 					SecretHash: validPasswordHash,

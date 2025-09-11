@@ -30,15 +30,15 @@ type InputCredentials interface {
 	Kind() CredentialKind
 }
 
-type StoredCredentials interface {
+type ValidationScheme interface {
 	Kind() CredentialKind
 }
 
-type RequestedCredentials interface {
+type IssueScheme interface {
 	Kind() CredentialKind
 }
 
 type Verifier interface {
 	Kind() CredentialKind
-	Verify(ctx context.Context, in InputCredentials, stored []StoredCredentials) (Principal, error)
+	Verify(ctx context.Context, in InputCredentials, stored []ValidationScheme) (Principal, error)
 }

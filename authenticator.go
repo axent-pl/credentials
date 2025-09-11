@@ -2,12 +2,12 @@ package auth
 
 import "context"
 
-type StoredCredentialsProvider interface {
-	QueryCredentials(ctx context.Context, in InputCredentials) ([]StoredCredentials, error)
+type ValidationSchemeProvider interface {
+	ValidationSchemes(ctx context.Context, in InputCredentials) ([]ValidationScheme, error)
 }
 
 type Authenticator struct {
-	Provider  StoredCredentialsProvider
+	Provider  ValidationSchemeProvider
 	Verifiers map[CredentialKind]Verifier
 }
 
@@ -19,12 +19,12 @@ func (a *Authenticator) Authenticate(ctx context.Context, in InputCredentials) (
 		return Principal{}, ErrInvalidCredentials
 	}
 
-	storedCredentials, err := a.Provider.QueryCredentials(ctx, in)
+	validationSchemes, err := a.Provider.ValidationSchemes(ctx, in)
 	if err != nil {
 		return Principal{}, ErrInvalidCredentials
 	}
 
-	principal, err := verifier.Verify(ctx, in, storedCredentials)
+	principal, err := verifier.Verify(ctx, in, validationSchemes)
 	if err != nil {
 		return Principal{}, ErrInvalidCredentials
 	}

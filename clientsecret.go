@@ -24,7 +24,7 @@ type ClientSecretVerifier struct{}
 
 func (v *ClientSecretVerifier) Kind() CredentialKind { return CredClientSecret }
 
-func (v *ClientSecretVerifier) Verify(ctx context.Context, in InputCredentials, stored []StoredCredentials) (Principal, error) {
+func (v *ClientSecretVerifier) Verify(ctx context.Context, in InputCredentials, stored []ValidationScheme) (Principal, error) {
 	clientSecretInput, ok := in.(ClientSecretInput)
 	if !ok {
 		return Principal{}, ErrInvalidInput

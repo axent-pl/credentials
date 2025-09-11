@@ -20,7 +20,7 @@ func (JWTInput) Kind() CredentialKind { return CredJWT }
 
 // stored
 
-type JWTStored struct {
+type JWTScheme struct {
 	RequireKid bool
 	Keys       map[string]crypto.PublicKey
 	// Allowed value of the "alg" claim
@@ -39,7 +39,7 @@ type JWTStored struct {
 	Leeway time.Duration
 }
 
-func (JWTStored) Kind() CredentialKind { return CredJWT }
+func (JWTScheme) Kind() CredentialKind { return CredJWT }
 
 // verifier
 
@@ -47,7 +47,7 @@ type JWTVerifier struct{}
 
 func (v *JWTVerifier) Kind() CredentialKind { return CredJWT }
 
-func (v *JWTVerifier) Verify(_ context.Context, in InputCredentials, stored []StoredCredentials) (Principal, error) {
+func (v *JWTVerifier) Verify(_ context.Context, in InputCredentials, stored []ValidationScheme) (Principal, error) {
 	jwtInput, ok := in.(JWTInput)
 	if !ok || jwtInput.Token == "" {
 		return Principal{}, ErrInvalidInput
@@ -56,7 +56,7 @@ func (v *JWTVerifier) Verify(_ context.Context, in InputCredentials, stored []St
 	kid, tokenHasKid := getKid(jwtInput.Token)
 
 	for _, s := range stored {
-		conf, ok := s.(JWTStored)
+		conf, ok := s.(JWTScheme)
 		if !ok || len(conf.Keys) == 0 {
 			continue
 		}
@@ -102,7 +102,7 @@ func (v *JWTVerifier) Verify(_ context.Context, in InputCredentials, stored []St
 }
 
 // Build parser options
-func buildParserOptions(conf JWTStored) []jwt.ParserOption {
+func buildParserOptions(conf JWTScheme) []jwt.ParserOption {
 	var opts []jwt.ParserOption
 	if conf.Leeway > 0 {
 		opts = append(opts, jwt.WithLeeway(conf.Leeway))
