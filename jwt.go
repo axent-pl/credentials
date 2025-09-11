@@ -22,14 +22,9 @@ func (JWTInput) Kind() CredentialKind { return CredJWT }
 
 type JWTScheme struct {
 	RequireKid bool
-	Keys       map[string]crypto.PublicKey
-	// Allowed value of the "alg" claim
-	// E.g. "RS256", "RS384", "RS512",
-	// "ES256", "ES384", "ES512",
-	// "PS256", "PS384", "PS512"
-	ValidMethods []string
-	Issuer       string
-	Audience     string
+	Keys       []JWTSchemeKey
+	Issuer     string
+	Audience   string
 	// Leeway for "exp" and "nbf" claims
 	// See
 	//
@@ -37,6 +32,17 @@ type JWTScheme struct {
 	//
 	// - https://datatracker.ietf.org/doc/html/rfc7519#section-4.1.5
 	Leeway time.Duration
+}
+
+type JWTSchemeKey struct {
+	// "kid"
+	ID  string
+	Key crypto.PublicKey
+	// Allowed value of the "alg"
+	// E.g. "RS256", "RS384", "RS512",
+	// "ES256", "ES384", "ES512",
+	// "PS256", "PS384", "PS512"
+	Alg string
 }
 
 func (JWTScheme) Kind() CredentialKind { return CredJWT }
@@ -57,37 +63,27 @@ func (v *JWTVerifier) Verify(_ context.Context, in InputCredentials, stored []Va
 
 	for _, s := range stored {
 		conf, ok := s.(JWTScheme)
+		// not a JWTScheme or no keys in JWTScheme
 		if !ok || len(conf.Keys) == 0 {
+			continue
+		}
+		// scheme requires "kid" which is not present
+		if conf.RequireKid && !tokenHasKid {
 			continue
 		}
 
 		opts := buildParserOptions(conf)
 
-		// Select key(s) to try
-		var keysToTry []crypto.PublicKey
-		switch {
-		case conf.RequireKid && tokenHasKid:
-			if k, ok := conf.Keys[kid]; ok {
-				keysToTry = []crypto.PublicKey{k}
-			} else {
+		// Verify with the key(s)
+		for _, keyConfig := range conf.Keys {
+			if conf.RequireKid && kid != keyConfig.ID {
 				continue
 			}
-		case !conf.RequireKid && tokenHasKid:
-			if k, ok := conf.Keys[kid]; ok {
-				keysToTry = []crypto.PublicKey{k}
+			parseOptions := opts
+			if keyConfig.Alg != "" {
+				parseOptions = append(parseOptions, jwt.WithValidMethods([]string{keyConfig.Alg}))
 			}
-		case conf.RequireKid && !tokenHasKid:
-			continue
-		default:
-			keysToTry = make([]crypto.PublicKey, 0, len(conf.Keys))
-			for _, k := range conf.Keys {
-				keysToTry = append(keysToTry, k)
-			}
-		}
-
-		// Verify with the key(s)
-		for _, key := range keysToTry {
-			claims, err := parseToken(jwtInput.Token, key, opts)
+			claims, err := parseToken(jwtInput.Token, keyConfig.Key, parseOptions)
 			if err != nil {
 				continue
 			}
@@ -106,9 +102,6 @@ func buildParserOptions(conf JWTScheme) []jwt.ParserOption {
 	var opts []jwt.ParserOption
 	if conf.Leeway > 0 {
 		opts = append(opts, jwt.WithLeeway(conf.Leeway))
-	}
-	if len(conf.ValidMethods) > 0 {
-		opts = append(opts, jwt.WithValidMethods(conf.ValidMethods))
 	}
 	if conf.Issuer != "" {
 		opts = append(opts, jwt.WithIssuer(conf.Issuer))

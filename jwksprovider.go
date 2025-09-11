@@ -30,19 +30,21 @@ type jwksResponse struct {
 	Issuer       string   `json:"issuer,omitempty"`
 }
 
-// Minimal JWK fields needed to build RSA/ECDSA public keys.
 type jwkKey struct {
-	Kty string `json:"kty"`           // "RSA" or "EC"
-	Use string `json:"use,omitempty"` // often "sig"
-	Alg string `json:"alg,omitempty"` // e.g., "RS256"
-	Kid string `json:"kid,omitempty"` // key id
-	// RSA
-	N string `json:"n,omitempty"` // modulus, base64url
-	E string `json:"e,omitempty"` // exponent, base64url
-	// EC
-	Crv string `json:"crv,omitempty"` // "P-256", "P-384", "P-521"
-	X   string `json:"x,omitempty"`   // base64url
-	Y   string `json:"y,omitempty"`   // base64url
+	Use       string   `json:"use,omitempty"`
+	Kty       string   `json:"kty,omitempty"`
+	Kid       string   `json:"kid,omitempty"`
+	Crv       string   `json:"crv,omitempty"`
+	Alg       string   `json:"alg,omitempty"`
+	K         string   `json:"k,omitempty"`
+	X         string   `json:"x,omitempty"`
+	Y         string   `json:"y,omitempty"`
+	N         string   `json:"n,omitempty"`
+	E         string   `json:"e,omitempty"`
+	X5c       []string `json:"x5c,omitempty"`
+	X5u       *url.URL `json:"x5u,omitempty"`
+	X5tSHA1   string   `json:"x5t,omitempty"`
+	X5tSHA256 string   `json:"x5t#S256,omitempty"`
 }
 
 func b64uToBigInt(s string) (*big.Int, error) {
@@ -56,7 +58,7 @@ func b64uToBigInt(s string) (*big.Int, error) {
 	return new(big.Int).SetBytes(b), nil
 }
 
-func jwkToPublicKey(k jwkKey) (crypto.PublicKey, error) {
+func JwkToPublicKey(k jwkKey) (crypto.PublicKey, error) {
 	switch strings.ToUpper(k.Kty) {
 	case "RSA":
 		n, err := b64uToBigInt(k.N)
@@ -92,10 +94,6 @@ func jwkToPublicKey(k jwkKey) (crypto.PublicKey, error) {
 		y, err := b64uToBigInt(k.Y)
 		if err != nil {
 			return nil, fmt.Errorf("ec y: %w", err)
-		}
-		// Basic validation that the point is on the curve.
-		if !curve.IsOnCurve(x, y) {
-			return nil, errors.New("ec point not on curve")
 		}
 		return &ecdsa.PublicKey{Curve: curve, X: x, Y: y}, nil
 	default:
@@ -134,18 +132,21 @@ func (p *JWKSProvider) ValidationSchemes(ctx context.Context, in InputCredential
 		return nil, errors.New("jwks contains no keys")
 	}
 
-	keys := make(map[string]crypto.PublicKey, len(doc.Keys))
+	keys := make([]JWTSchemeKey, 0)
 	allHaveKID := true
 	for _, jk := range doc.Keys {
-		pub, err := jwkToPublicKey(jk)
+		pub, err := JwkToPublicKey(jk)
 		if err != nil {
-			continue
+			return nil, fmt.Errorf("could not extract public key: %w", err)
 		}
 		if jk.Kid == "" {
 			allHaveKID = false
-			// TODO: generate kid
 		}
-		keys[jk.Kid] = pub
+		keys = append(keys, JWTSchemeKey{
+			ID:  jk.Kid,
+			Key: pub,
+			Alg: jk.Alg,
+		})
 	}
 
 	if len(keys) == 0 {
@@ -153,11 +154,8 @@ func (p *JWKSProvider) ValidationSchemes(ctx context.Context, in InputCredential
 	}
 
 	scheme := JWTScheme{
-		RequireKid:   allHaveKID && len(keys) > 1, // require kid only if all keys provide it and there are multiple keys
-		Keys:         keys,
-		ValidMethods: doc.ValidMethods, // if empty, verifier won't restrict algs
-		Issuer:       doc.Issuer,       // if empty, verifier won't enforce issuer
-		// Audience and Leeway can be wired in here later if your JWKS adds them.
+		RequireKid: allHaveKID && len(keys) > 1, // require kid only if all keys provide it and there are multiple keys
+		Keys:       keys,
 	}
 
 	return []ValidationScheme{scheme}, nil
