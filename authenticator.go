@@ -2,10 +2,6 @@ package auth
 
 import "context"
 
-type ValidationSchemeProvider interface {
-	ValidationSchemes(ctx context.Context, in InputCredentials) ([]ValidationScheme, error)
-}
-
 type Authenticator struct {
 	Provider  ValidationSchemeProvider
 	Verifiers map[CredentialKind]Verifier

@@ -72,18 +72,13 @@ func (v *JWTVerifier) Verify(_ context.Context, in InputCredentials, stored []Va
 			continue
 		}
 
-		opts := buildParserOptions(conf)
-
 		// Verify with the key(s)
 		for _, keyConfig := range conf.Keys {
 			if conf.RequireKid && kid != keyConfig.ID {
 				continue
 			}
-			parseOptions := opts
-			if keyConfig.Alg != "" {
-				parseOptions = append(parseOptions, jwt.WithValidMethods([]string{keyConfig.Alg}))
-			}
-			claims, err := parseToken(jwtInput.Token, keyConfig.Key, parseOptions)
+			opts := buildParserOptions(conf, keyConfig)
+			claims, err := parseToken(jwtInput.Token, keyConfig.Key, opts)
 			if err != nil {
 				continue
 			}
@@ -98,7 +93,7 @@ func (v *JWTVerifier) Verify(_ context.Context, in InputCredentials, stored []Va
 }
 
 // Build parser options
-func buildParserOptions(conf JWTScheme) []jwt.ParserOption {
+func buildParserOptions(conf JWTScheme, keyConf JWTSchemeKey) []jwt.ParserOption {
 	var opts []jwt.ParserOption
 	if conf.Leeway > 0 {
 		opts = append(opts, jwt.WithLeeway(conf.Leeway))
@@ -108,6 +103,9 @@ func buildParserOptions(conf JWTScheme) []jwt.ParserOption {
 	}
 	if conf.Audience != "" {
 		opts = append(opts, jwt.WithAudience(conf.Audience))
+	}
+	if keyConf.Alg != "" {
+		opts = append(opts, jwt.WithValidMethods([]string{keyConf.Alg}))
 	}
 	return opts
 }

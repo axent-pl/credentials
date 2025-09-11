@@ -101,8 +101,6 @@ func JwkToPublicKey(k jwkKey) (crypto.PublicKey, error) {
 	}
 }
 
-// --- implementation ---
-
 func (p *JWKSProvider) ValidationSchemes(ctx context.Context, in InputCredentials) ([]ValidationScheme, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, p.JWKSURL.String(), nil)
 	if err != nil {
