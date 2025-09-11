@@ -11,12 +11,12 @@ var ErrInvalidInput = errors.New("bad input")
 type CredentialKind string
 
 const (
-	CredPassword     CredentialKind = "password"
-	CredClientSecret CredentialKind = "client_secret"
-	CredJWTAssertion CredentialKind = "jwt_assertion"
-	CredJWT          CredentialKind = "jwt"
-	CredMTLS         CredentialKind = "mtls"
-	CredSAMLRequest  CredentialKind = "saml_request"
+	CredPassword        CredentialKind = "password"
+	CredClientSecret    CredentialKind = "client_secret"
+	CredClientAssertion CredentialKind = "client_assertion"
+	CredJWT             CredentialKind = "jwt"
+	CredMTLS            CredentialKind = "mtls"
+	CredSAMLRequest     CredentialKind = "saml_request"
 )
 
 type SubjectID string
