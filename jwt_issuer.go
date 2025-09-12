@@ -3,6 +3,7 @@ package auth
 import (
 	"context"
 	"crypto"
+	"encoding/json"
 	"fmt"
 	"maps"
 	"time"
@@ -14,6 +15,7 @@ import (
 // -- issue scheme
 type JWTIssueScheme struct {
 	Issuer string
+	Exp    time.Duration
 	Key    JWTIssueSchemeKey
 }
 
@@ -116,6 +118,25 @@ func (iss *JWTIssuer) Issue(ctx context.Context, principal Principal, scheme Iss
 		Bytes:     refreshTokenBytes,
 	})
 
+	// oauth2 token response
+	tokenResponse := map[string]any{
+		"token_type":    "Bearer",
+		"expires_in":    jwtIssueScheme.Exp.Seconds(),
+		"access_token":  string(accessTokenBytes),
+		"id_token":      string(idTokenBytes),
+		"refresh_token": string(refreshTokenBytes),
+	}
+	respBytes, err := json.Marshal(tokenResponse)
+	if err != nil {
+		logx.L().Debug("could not marshal oauth2 token response", "context", ctx, "error", err)
+		return nil, ErrInternal
+	}
+	artifacts = append(artifacts, Artifact{
+		Kind:      ArtifactOAuth2TokenResponse,
+		MediaType: "application/json",
+		Bytes:     respBytes,
+	})
+
 	return artifacts, nil
 }
 
@@ -169,7 +190,7 @@ func (iss *JWTIssuer) BaseClaims(ctx context.Context, principal Principal, schem
 	claims := make(map[string]any)
 	claims["sub"] = principal.Subject
 	claims["iss"] = scheme.Issuer
-	claims["exp"] = time.Now().Add(time.Hour * 1).Unix()
+	claims["exp"] = time.Now().Add(scheme.Exp).Unix()
 	claims["iat"] = time.Now().Unix()
 	if issueParams.AuthorizedParty != "" {
 		claims["azp"] = issueParams.AuthorizedParty

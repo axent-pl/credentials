@@ -53,10 +53,11 @@ type IssueParams interface {
 type ArtifactKind string
 
 const (
-	ArtifactUnknown      ArtifactKind = ""
-	ArtifactAccessToken  ArtifactKind = "access_token"
-	ArtifactRefreshToken ArtifactKind = "refresh_token"
-	ArtifactIdToken      ArtifactKind = "id_token"
+	ArtifactUnknown             ArtifactKind = ""
+	ArtifactAccessToken         ArtifactKind = "access_token"
+	ArtifactRefreshToken        ArtifactKind = "refresh_token"
+	ArtifactIdToken             ArtifactKind = "id_token"
+	ArtifactOAuth2TokenResponse ArtifactKind = "oauth2_token_response"
 )
 
 type Artifact struct {
