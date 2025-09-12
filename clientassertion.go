@@ -7,13 +7,17 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/axent-pl/auth/logx"
 	"github.com/golang-jwt/jwt/v5"
 )
 
+// Common URN per RFC 7523 / OAuth 2.0 JWT bearer assertions.
+const URNClientAssertionType = "urn:ietf:params:oauth:client-assertion-type:jwt-bearer"
+
 type ClientAssertionInput struct {
-	ClientId           string
-	ClientAssetionType string
-	ClientAssertion    string
+	ClientId            string
+	ClientAssertionType string
+	ClientAssertion     string
 }
 
 func (ClientAssertionInput) Kind() CredentialKind { return CredClientAssertion }
@@ -49,9 +53,18 @@ type ClientAssertionVerifier struct{}
 
 func (v *ClientAssertionVerifier) Kind() CredentialKind { return CredClientAssertion }
 
-func (v *ClientAssertionVerifier) Verify(_ context.Context, in InputCredentials, stored []ValidationScheme) (Principal, error) {
+func (v *ClientAssertionVerifier) Verify(ctx context.Context, in InputCredentials, stored []ValidationScheme) (Principal, error) {
 	clientAssertionInput, ok := in.(ClientAssertionInput)
-	if !ok || clientAssertionInput.ClientAssertion == "" {
+	if !ok {
+		logx.L().Debug("could not cast InputCredentials to ClientAssertionInput")
+		return Principal{}, ErrInvalidInput
+	}
+	if clientAssertionInput.ClientAssertion == "" {
+		logx.L().Debug("empty client_assertion")
+		return Principal{}, ErrInvalidInput
+	}
+	if clientAssertionInput.ClientAssertionType != URNClientAssertionType {
+		logx.L().Debug("invalid client_assertion_type")
 		return Principal{}, ErrInvalidInput
 	}
 
