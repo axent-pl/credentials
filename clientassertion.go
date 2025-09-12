@@ -27,9 +27,9 @@ type ClientAssertionScheme struct {
 	// assertions are usually self signed
 	// and attacker could take over application X
 	// and issue assertion with sub=Y
-	Subject    SubjectID
-	RequireKid bool
-	Keys       []ClientAssertionSchemeKey
+	Subject      SubjectID
+	MustMatchKid bool
+	Keys         []ClientAssertionSchemeKey
 	// It should be present,
 	// for self signed assertion its value will be the same as "sub"
 	Issuer string
@@ -53,37 +53,44 @@ type ClientAssertionVerifier struct{}
 
 func (v *ClientAssertionVerifier) Kind() CredentialKind { return CredClientAssertion }
 
-func (v *ClientAssertionVerifier) Verify(ctx context.Context, in InputCredentials, stored []ValidationScheme) (Principal, error) {
+func (v *ClientAssertionVerifier) Verify(ctx context.Context, in InputCredentials, schemes []ValidationScheme) (Principal, error) {
 	clientAssertionInput, ok := in.(ClientAssertionInput)
 	if !ok {
-		logx.L().Debug("could not cast InputCredentials to ClientAssertionInput")
+		logx.L().Debug("could not cast InputCredentials to ClientAssertionInput", "context", ctx)
 		return Principal{}, ErrInvalidInput
 	}
 	if clientAssertionInput.ClientAssertion == "" {
-		logx.L().Debug("empty client_assertion")
+		logx.L().Debug("empty client_assertion", "context", ctx)
 		return Principal{}, ErrInvalidInput
 	}
 	if clientAssertionInput.ClientAssertionType != URNClientAssertionType {
-		logx.L().Debug("invalid client_assertion_type")
+		logx.L().Debug(fmt.Sprintf("invalid client_assertion_type: got '%s', want '%s", clientAssertionInput.ClientAssertionType, URNClientAssertionType), "context", ctx)
 		return Principal{}, ErrInvalidInput
 	}
 
-	kid, tokenHasKid := getClientAssertionKid(clientAssertionInput.ClientAssertion)
+	headerKid, tokenHasKid, headerAlg, err := parseClientAssertionHeader(clientAssertionInput.ClientAssertion)
+	if err != nil {
+		logx.L().Debug("could not parse client_assertion token header", "context", ctx, "error", err)
+		return Principal{}, ErrInvalidInput
+	}
 
-	for _, s := range stored {
+	for _, s := range schemes {
 		scheme, ok := s.(ClientAssertionScheme)
 		if !ok || len(scheme.Keys) == 0 {
 			continue
 		}
-		if scheme.RequireKid && !tokenHasKid {
+		if scheme.MustMatchKid && !tokenHasKid {
 			continue
 		}
-		for _, keyConfig := range scheme.Keys {
-			if scheme.RequireKid && kid != keyConfig.Kid {
+		for _, keyScheme := range scheme.Keys {
+			if scheme.MustMatchKid && headerKid != keyScheme.Kid {
 				continue
 			}
-			opts := buildClientAssertionParserOptions(scheme, keyConfig)
-			claims, err := parseClientAssertion(clientAssertionInput.ClientAssertion, keyConfig.PublicKey, opts)
+			if keyScheme.Alg != "" && keyScheme.Alg != headerAlg {
+				continue
+			}
+			opts := buildClientAssertionParserOptions(scheme, keyScheme)
+			claims, err := parseClientAssertion(clientAssertionInput.ClientAssertion, keyScheme.PublicKey, opts)
 			if err != nil {
 				continue
 			}
@@ -116,18 +123,19 @@ func buildClientAssertionParserOptions(scheme ClientAssertionScheme, keyConf Cli
 	return opts
 }
 
-func getClientAssertionKid(token string) (string, bool) {
-	var hdrClaims jwt.RegisteredClaims
+func parseClientAssertionHeader(token string) (kid string, hasKid bool, alg string, err error) {
 	parser := jwt.NewParser()
-	unverified, _, err := parser.ParseUnverified(token, &hdrClaims)
-	if err != nil {
-		return "", false
+	unverifiedToken, _, err := parser.ParseUnverified(token, jwt.MapClaims{})
+	if err != nil || unverifiedToken == nil {
+		return "", false, "", err
 	}
-	kid, ok := unverified.Header["kid"].(string)
-	if !ok || kid == "" {
-		return "", false
+	if k, ok := unverifiedToken.Header["kid"].(string); ok && k != "" {
+		kid, hasKid = k, true
 	}
-	return kid, true
+	if a, ok := unverifiedToken.Header["alg"].(string); ok && a != "" {
+		alg = a
+	}
+	return kid, hasKid, alg, nil
 }
 
 func parseClientAssertion(token string, key crypto.PublicKey, opts []jwt.ParserOption) (*jwt.RegisteredClaims, error) {
