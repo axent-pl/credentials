@@ -3,6 +3,7 @@ package auth
 import (
 	"context"
 
+	"github.com/axent-pl/auth/logx"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -27,8 +28,18 @@ func (v *ClientSecretVerifier) Kind() CredentialKind { return CredClientSecret }
 func (v *ClientSecretVerifier) Verify(ctx context.Context, in InputCredentials, stored []ValidationScheme) (Principal, error) {
 	clientSecretInput, ok := in.(ClientSecretInput)
 	if !ok {
+		logx.L().Debug("could not cast InputCredentials to ClientSecretInput", "context", ctx)
 		return Principal{}, ErrInvalidInput
 	}
+	if clientSecretInput.ClientID == "" {
+		logx.L().Debug("empty client_id", "context", ctx)
+		return Principal{}, ErrInvalidInput
+	}
+	if clientSecretInput.ClientSecret == "" {
+		logx.L().Debug("empty client_secret", "context", ctx)
+		return Principal{}, ErrInvalidInput
+	}
+
 	for _, s := range stored {
 		clientSecretStored, ok := s.(ClientSecretStored)
 		if !ok || clientSecretStored.ClientID != clientSecretInput.ClientID {
