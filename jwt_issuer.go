@@ -28,6 +28,13 @@ func (JWTIssueScheme) Kind() CredentialKind { return CredJWT }
 // -- issue params
 type JWTIssueParams struct {
 	AuthorizedParty SubjectID
+
+	AccessIncludedClaims  []string
+	AccessOverlayClaims   map[string]any
+	IdIncludedClaims      []string
+	IdOverlayClaims       map[string]any
+	RefreshIncludedClaims []string
+	RefreshOverlayClaims  map[string]any
 }
 
 func (JWTIssueParams) Kind() CredentialKind { return CredJWT }
@@ -49,15 +56,67 @@ func (iss *JWTIssuer) Issue(ctx context.Context, principal *Principal, scheme Is
 		logx.L().Debug("could not cast IssueParams to JWTIssueParams", "context", ctx)
 		return nil, ErrInternal
 	}
+
 	baseClaims, err := iss.BaseClaims(ctx, principal, jwtIssueScheme, jwtIssueParams)
 	if err != nil {
 		logx.L().Debug("could not build base claims", "context", ctx, "error", err)
 		return nil, ErrInternal
 	}
 
-	fmt.Println(baseClaims) // just draft
+	artifacts := make([]Artifact, 0)
 
-	return nil, nil
+	// access token
+	accessClaims, err := iss.PatchedClaims(ctx, principal, baseClaims, jwtIssueParams.AccessIncludedClaims, jwtIssueParams.AccessOverlayClaims)
+	if err != nil {
+		logx.L().Debug("could not build access token claims", "context", ctx, "error", err)
+		return nil, ErrInternal
+	}
+	accessTokenBytes, err := iss.Sign(accessClaims, jwtIssueScheme)
+	if err != nil {
+		logx.L().Debug("could not sign access token", "context", ctx, "error", err)
+		return nil, ErrInternal
+	}
+	artifacts = append(artifacts, Artifact{
+		Kind:      ArtifactAccessToken,
+		MediaType: "application/jwt",
+		Bytes:     accessTokenBytes,
+	})
+
+	// id token
+	idClaims, err := iss.PatchedClaims(ctx, principal, baseClaims, jwtIssueParams.IdIncludedClaims, jwtIssueParams.IdOverlayClaims)
+	if err != nil {
+		logx.L().Debug("could not build id token claims", "context", ctx, "error", err)
+		return nil, ErrInternal
+	}
+	idTokenBytes, err := iss.Sign(idClaims, jwtIssueScheme)
+	if err != nil {
+		logx.L().Debug("could not sign id token", "context", ctx, "error", err)
+		return nil, ErrInternal
+	}
+	artifacts = append(artifacts, Artifact{
+		Kind:      ArtifactIdToken,
+		MediaType: "application/jwt",
+		Bytes:     idTokenBytes,
+	})
+
+	// refresh token
+	refreshClaims, err := iss.PatchedClaims(ctx, principal, baseClaims, jwtIssueParams.RefreshIncludedClaims, jwtIssueParams.RefreshOverlayClaims)
+	if err != nil {
+		logx.L().Debug("could not build refresh token claims", "context", ctx, "error", err)
+		return nil, ErrInternal
+	}
+	refreshTokenBytes, err := iss.Sign(refreshClaims, jwtIssueScheme)
+	if err != nil {
+		logx.L().Debug("could not sign refresh token", "context", ctx, "error", err)
+		return nil, ErrInternal
+	}
+	artifacts = append(artifacts, Artifact{
+		Kind:      ArtifactRefreshToken,
+		MediaType: "application/jwt",
+		Bytes:     refreshTokenBytes,
+	})
+
+	return artifacts, nil
 }
 
 func (iss *JWTIssuer) Sign(payload map[string]any, scheme JWTIssueScheme) ([]byte, error) {
@@ -70,13 +129,40 @@ func (iss *JWTIssuer) Sign(payload map[string]any, scheme JWTIssueScheme) ([]byt
 	}
 
 	token := jwt.NewWithClaims(signingMethod, claims)
+	if scheme.Key.Kid != "" {
+		token.Header["kid"] = scheme.Key.Kid
+	}
 
 	tokenString, err := token.SignedString(scheme.Key.PrivateKey)
 	if err != nil {
 		return nil, fmt.Errorf("could not sign payload: %w", err)
 	}
-
 	return []byte(tokenString), nil
+}
+
+func (iss *JWTIssuer) PatchedClaims(ctx context.Context, principal *Principal, baseClaims map[string]any, includedClaims []string, overlayClaims map[string]any) (map[string]any, error) {
+	// 1) clone baseClaims
+	out := maps.Clone(baseClaims)
+
+	// 2) add claims from principal.Attributes where key is in includedClaims
+	if principal != nil && principal.Attributes != nil && len(includedClaims) > 0 {
+		allow := make(map[string]struct{}, len(includedClaims))
+		for _, k := range includedClaims {
+			allow[k] = struct{}{}
+		}
+		for k, v := range principal.Attributes {
+			if _, ok := allow[k]; ok {
+				out[k] = v
+			}
+		}
+	}
+
+	// 3) add overrides from overlayClaims
+	if overlayClaims != nil {
+		maps.Copy(out, overlayClaims)
+	}
+
+	return out, nil
 }
 
 func (iss *JWTIssuer) BaseClaims(ctx context.Context, principal *Principal, scheme JWTIssueScheme, issueParams JWTIssueParams) (map[string]any, error) {
