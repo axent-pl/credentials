@@ -39,6 +39,7 @@ type ClientAssertionScheme struct {
 	// for client authenticatio with client_assertion.
 	Audience string
 	Leeway   time.Duration
+	Replay   ReplayChecker
 }
 
 type ClientAssertionSchemeKey struct {
@@ -96,6 +97,11 @@ func (v *ClientAssertionVerifier) Verify(ctx context.Context, in InputCredential
 			}
 			if claims.Subject == "" {
 				continue
+			}
+			if scheme.Replay != nil && claims.ID != "" && claims.ExpiresAt != nil {
+				if scheme.Replay.Seen(ctx, claims.ID, claims.ExpiresAt.Time) {
+					continue
+				}
 			}
 			return Principal{Subject: SubjectID(claims.Subject)}, nil
 		}
