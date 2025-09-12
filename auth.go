@@ -68,5 +68,5 @@ type Artifact struct {
 
 type Issuer interface {
 	Kind() CredentialKind
-	Issue(ctx context.Context, principal *Principal, scheme IssueScheme, issueParams IssueParams) ([]Artifact, error)
+	Issue(ctx context.Context, principal Principal, scheme IssueScheme, issueParams IssueParams) ([]Artifact, error)
 }

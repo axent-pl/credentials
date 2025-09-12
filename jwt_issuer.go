@@ -45,7 +45,7 @@ type JWTIssuer struct {
 
 func (JWTIssuer) Kind() CredentialKind { return CredJWT }
 
-func (iss *JWTIssuer) Issue(ctx context.Context, principal *Principal, scheme IssueScheme, issueParams IssueParams) ([]Artifact, error) {
+func (iss *JWTIssuer) Issue(ctx context.Context, principal Principal, scheme IssueScheme, issueParams IssueParams) ([]Artifact, error) {
 	jwtIssueScheme, ok := issueParams.(JWTIssueScheme)
 	if !ok {
 		logx.L().Debug("could not cast IssueScheme to JWTIssueScheme", "context", ctx)
@@ -140,12 +140,12 @@ func (iss *JWTIssuer) Sign(payload map[string]any, scheme JWTIssueScheme) ([]byt
 	return []byte(tokenString), nil
 }
 
-func (iss *JWTIssuer) PatchedClaims(ctx context.Context, principal *Principal, baseClaims map[string]any, includedClaims []string, overlayClaims map[string]any) (map[string]any, error) {
+func (iss *JWTIssuer) PatchedClaims(ctx context.Context, principal Principal, baseClaims map[string]any, includedClaims []string, overlayClaims map[string]any) (map[string]any, error) {
 	// 1) clone baseClaims
 	out := maps.Clone(baseClaims)
 
 	// 2) add claims from principal.Attributes where key is in includedClaims
-	if principal != nil && principal.Attributes != nil && len(includedClaims) > 0 {
+	if principal.Attributes != nil && len(includedClaims) > 0 {
 		allow := make(map[string]struct{}, len(includedClaims))
 		for _, k := range includedClaims {
 			allow[k] = struct{}{}
@@ -165,7 +165,7 @@ func (iss *JWTIssuer) PatchedClaims(ctx context.Context, principal *Principal, b
 	return out, nil
 }
 
-func (iss *JWTIssuer) BaseClaims(ctx context.Context, principal *Principal, scheme JWTIssueScheme, issueParams JWTIssueParams) (map[string]any, error) {
+func (iss *JWTIssuer) BaseClaims(ctx context.Context, principal Principal, scheme JWTIssueScheme, issueParams JWTIssueParams) (map[string]any, error) {
 	claims := make(map[string]any)
 	claims["sub"] = principal.Subject
 	claims["iss"] = scheme.Issuer
