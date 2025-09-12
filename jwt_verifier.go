@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/axent-pl/auth/logx"
 	"github.com/golang-jwt/jwt/v5"
 )
 
@@ -13,32 +14,44 @@ type JWTVerifier struct{}
 
 func (v *JWTVerifier) Kind() CredentialKind { return CredJWT }
 
-func (v *JWTVerifier) Verify(_ context.Context, in InputCredentials, stored []ValidationScheme) (Principal, error) {
+func (v *JWTVerifier) Verify(ctx context.Context, in InputCredentials, schemes []ValidationScheme) (Principal, error) {
 	jwtInput, ok := in.(JWTInput)
-	if !ok || jwtInput.Token == "" {
+	if !ok {
+		logx.L().Debug("could not cast InputCredentials to JWTInput", "context", ctx)
+		return Principal{}, ErrInvalidInput
+	}
+	if jwtInput.Token == "" {
+		logx.L().Debug("empty token", "context", ctx)
 		return Principal{}, ErrInvalidInput
 	}
 
-	kid, tokenHasKid := getKid(jwtInput.Token)
+	headerKid, tokenHasKid, headerAlg, err := parseJWTHeader(jwtInput.Token)
+	if err != nil {
+		logx.L().Debug("could not parse token header", "context", ctx, "error", err)
+		return Principal{}, ErrInvalidInput
+	}
 
-	for _, s := range stored {
+	for _, s := range schemes {
 		conf, ok := s.(JWTScheme)
 		// not a JWTScheme or no keys in JWTScheme
 		if !ok || len(conf.Keys) == 0 {
 			continue
 		}
 		// scheme requires "kid" which is not present
-		if conf.RequireKid && !tokenHasKid {
+		if conf.MustMatchKid && !tokenHasKid {
 			continue
 		}
 
 		// Verify with the key(s)
 		for _, keyConfig := range conf.Keys {
-			if conf.RequireKid && kid != keyConfig.ID {
+			if conf.MustMatchKid && headerKid != keyConfig.ID {
+				continue
+			}
+			if keyConfig.Alg != "" && keyConfig.Alg != headerAlg {
 				continue
 			}
 			opts := buildParserOptions(conf, keyConfig)
-			claims, err := parseToken(jwtInput.Token, keyConfig.Key, opts)
+			claims, err := parseJWT(jwtInput.Token, keyConfig.Key, opts)
 			if err != nil {
 				continue
 			}
@@ -53,16 +66,19 @@ func (v *JWTVerifier) Verify(_ context.Context, in InputCredentials, stored []Va
 }
 
 // Build parser options
-func buildParserOptions(conf JWTScheme, keyConf JWTSchemeKey) []jwt.ParserOption {
+func buildParserOptions(scheme JWTScheme, keyConf JWTSchemeKey) []jwt.ParserOption {
 	var opts []jwt.ParserOption
-	if conf.Leeway > 0 {
-		opts = append(opts, jwt.WithLeeway(conf.Leeway))
+	if scheme.Subject != "" {
+		opts = append(opts, jwt.WithSubject(string(scheme.Subject)))
 	}
-	if conf.Issuer != "" {
-		opts = append(opts, jwt.WithIssuer(conf.Issuer))
+	if scheme.Leeway > 0 {
+		opts = append(opts, jwt.WithLeeway(scheme.Leeway))
 	}
-	if conf.Audience != "" {
-		opts = append(opts, jwt.WithAudience(conf.Audience))
+	if scheme.Issuer != "" {
+		opts = append(opts, jwt.WithIssuer(scheme.Issuer))
+	}
+	if scheme.Audience != "" {
+		opts = append(opts, jwt.WithAudience(scheme.Audience))
 	}
 	if keyConf.Alg != "" {
 		opts = append(opts, jwt.WithValidMethods([]string{keyConf.Alg}))
@@ -70,25 +86,22 @@ func buildParserOptions(conf JWTScheme, keyConf JWTSchemeKey) []jwt.ParserOption
 	return opts
 }
 
-// Read "kid" (key id) claim from unverified token header
-func getKid(token string) (string, bool) {
-	var hdrClaims jwt.RegisteredClaims
+func parseJWTHeader(token string) (kid string, hasKid bool, alg string, err error) {
 	parser := jwt.NewParser()
-	unverified, _, err := parser.ParseUnverified(token, &hdrClaims)
-	if err != nil {
-		return "", false
+	unverifiedToken, _, err := parser.ParseUnverified(token, jwt.MapClaims{})
+	if err != nil || unverifiedToken == nil {
+		return "", false, "", err
 	}
-	kid, ok := unverified.Header["kid"].(string)
-	if !ok {
-		return "", false
+	if k, ok := unverifiedToken.Header["kid"].(string); ok && k != "" {
+		kid, hasKid = k, true
 	}
-	if kid == "" {
-		return "", false
+	if a, ok := unverifiedToken.Header["alg"].(string); ok && a != "" {
+		alg = a
 	}
-	return kid, true
+	return kid, hasKid, alg, nil
 }
 
-func parseToken(token string, key crypto.PublicKey, opts []jwt.ParserOption) (*jwt.RegisteredClaims, error) {
+func parseJWT(token string, key crypto.PublicKey, opts []jwt.ParserOption) (*jwt.RegisteredClaims, error) {
 	// verify and parse token with given key and options
 	claims := &jwt.RegisteredClaims{}
 	jwtToken, err := jwt.ParseWithClaims(

@@ -6,10 +6,11 @@ import (
 )
 
 type JWTScheme struct {
-	RequireKid bool
-	Keys       []JWTSchemeKey
-	Issuer     string
-	Audience   string
+	Subject      SubjectID
+	MustMatchKid bool
+	Keys         []JWTSchemeKey
+	Issuer       string
+	Audience     string
 	// Leeway for "exp" and "nbf" claims
 	// See
 	//

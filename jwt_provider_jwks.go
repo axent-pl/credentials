@@ -152,8 +152,8 @@ func (p *JWKSProvider) ValidationSchemes(ctx context.Context, in InputCredential
 	}
 
 	scheme := JWTScheme{
-		RequireKid: allHaveKID && len(keys) > 1, // require kid only if all keys provide it and there are multiple keys
-		Keys:       keys,
+		MustMatchKid: allHaveKID && len(keys) > 1, // require kid only if all keys provide it and there are multiple keys
+		Keys:         keys,
 	}
 
 	return []ValidationScheme{scheme}, nil

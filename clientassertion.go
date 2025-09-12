@@ -155,7 +155,7 @@ func parseClientAssertion(token string, key crypto.PublicKey, opts []jwt.ParserO
 		opts...,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("could not parse assertion: %w", err)
+		return nil, fmt.Errorf("could not parse client_assertion: %w", err)
 	}
 	if tok == nil {
 		return nil, errors.New("assertion is empty")
