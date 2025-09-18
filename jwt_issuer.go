@@ -188,12 +188,12 @@ func (iss *JWTIssuer) PatchedClaims(ctx context.Context, principal Principal, ba
 
 func (iss *JWTIssuer) BaseClaims(ctx context.Context, principal Principal, scheme JWTIssueScheme, issueParams JWTIssueParams) (map[string]any, error) {
 	claims := make(map[string]any)
-	claims["sub"] = principal.Subject
+	claims["sub"] = string(principal.Subject)
 	claims["iss"] = scheme.Issuer
 	claims["exp"] = time.Now().Add(scheme.Exp).Unix()
 	claims["iat"] = time.Now().Unix()
 	if issueParams.AuthorizedParty != "" {
-		claims["azp"] = issueParams.AuthorizedParty
+		claims["azp"] = string(issueParams.AuthorizedParty)
 	}
 	return claims, nil
 }
