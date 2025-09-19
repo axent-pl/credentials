@@ -25,7 +25,7 @@ func (v *JWTVerifier) Verify(ctx context.Context, in InputCredentials, schemes [
 		return Principal{}, ErrInvalidInput
 	}
 
-	headerKid, tokenHasKid, headerAlg, err := parseJWTHeader(jwtInput.Token)
+	headerKid, tokenHasKid, headerAlg, err := v.parseJWTHeader(jwtInput.Token)
 	if err != nil {
 		logx.L().Debug("could not parse token header", "context", ctx, "error", err)
 		return Principal{}, ErrInvalidInput
@@ -50,7 +50,7 @@ func (v *JWTVerifier) Verify(ctx context.Context, in InputCredentials, schemes [
 			if keyConfig.Alg != "" && keyConfig.Alg != headerAlg {
 				continue
 			}
-			opts := buildParserOptions(conf, keyConfig)
+			opts := v.buildParserOptions(conf, keyConfig)
 			claims, err := parseJWT(jwtInput.Token, keyConfig.Key, opts)
 			if err != nil {
 				continue
@@ -66,7 +66,7 @@ func (v *JWTVerifier) Verify(ctx context.Context, in InputCredentials, schemes [
 }
 
 // Build parser options
-func buildParserOptions(scheme JWTScheme, keyConf JWTSchemeKey) []jwt.ParserOption {
+func (v *JWTVerifier) buildParserOptions(scheme JWTScheme, keyConf JWTSchemeKey) []jwt.ParserOption {
 	var opts []jwt.ParserOption
 	if scheme.Subject != "" {
 		opts = append(opts, jwt.WithSubject(string(scheme.Subject)))
@@ -86,7 +86,7 @@ func buildParserOptions(scheme JWTScheme, keyConf JWTSchemeKey) []jwt.ParserOpti
 	return opts
 }
 
-func parseJWTHeader(token string) (kid string, hasKid bool, alg string, err error) {
+func (v *JWTVerifier) parseJWTHeader(token string) (kid string, hasKid bool, alg string, err error) {
 	parser := jwt.NewParser()
 	unverifiedToken, _, err := parser.ParseUnverified(token, jwt.MapClaims{})
 	if err != nil || unverifiedToken == nil {
