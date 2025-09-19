@@ -48,7 +48,7 @@ type JWTIssuer struct {
 func (JWTIssuer) Kind() CredentialKind { return CredJWT }
 
 func (iss *JWTIssuer) Issue(ctx context.Context, principal Principal, scheme IssueScheme, issueParams IssueParams) ([]Artifact, error) {
-	jwtIssueScheme, ok := issueParams.(JWTIssueScheme)
+	jwtIssueScheme, ok := scheme.(JWTIssueScheme)
 	if !ok {
 		logx.L().Debug("could not cast IssueScheme to JWTIssueScheme", "context", ctx)
 		return nil, ErrInternal
