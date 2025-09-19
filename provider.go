@@ -3,16 +3,16 @@ package auth
 import "context"
 
 type ValidationSchemeProvider interface {
-	ValidationSchemes(ctx context.Context, in InputCredentials) ([]ValidationScheme, error)
+	ValidationSchemes(ctx context.Context, in Input) ([]Scheme, error)
 }
 
 type ValidationSchemeProviderSet struct {
 	Providers []ValidationSchemeProvider
 }
 
-func (s *ValidationSchemeProviderSet) ValidationSchemes(ctx context.Context, in InputCredentials) ([]ValidationScheme, error) {
+func (s *ValidationSchemeProviderSet) ValidationSchemes(ctx context.Context, in Input) ([]Scheme, error) {
 	var lastErr error
-	var schemes []ValidationScheme = make([]ValidationScheme, 0)
+	var schemes []Scheme = make([]Scheme, 0)
 	for _, p := range s.Providers {
 		providerSchemes, err := p.ValidationSchemes(ctx, in)
 		if err == nil {

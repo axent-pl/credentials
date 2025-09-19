@@ -31,4 +31,4 @@ type JWTSchemeKey struct {
 	Alg string
 }
 
-func (JWTScheme) Kind() CredentialKind { return CredJWT }
+func (JWTScheme) Kind() Kind { return CredJWT }

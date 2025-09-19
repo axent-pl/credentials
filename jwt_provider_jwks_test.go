@@ -70,14 +70,14 @@ func TestJWKSProvider_ValidationSchemes(t *testing.T) {
 	})
 	tests := []struct {
 		name     string
-		in       auth.InputCredentials
-		wantTest func([]auth.ValidationScheme) error
+		in       auth.Input
+		wantTest func([]auth.Scheme) error
 		wantErr  bool
 	}{
 		{
 			name: "successful execution",
 			in:   auth.JWTInput{Token: "ttt"},
-			wantTest: func(schemes []auth.ValidationScheme) error {
+			wantTest: func(schemes []auth.Scheme) error {
 				if len(schemes) < 1 {
 					return errors.New("no schemes")
 				}

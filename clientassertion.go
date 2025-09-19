@@ -20,7 +20,7 @@ type ClientAssertionInput struct {
 	ClientAssertion     string
 }
 
-func (ClientAssertionInput) Kind() CredentialKind { return CredClientAssertion }
+func (ClientAssertionInput) Kind() Kind { return CredClientAssertion }
 
 type ClientAssertionScheme struct {
 	// Should be present,
@@ -48,13 +48,13 @@ type ClientAssertionSchemeKey struct {
 	Alg       string
 }
 
-func (ClientAssertionScheme) Kind() CredentialKind { return CredClientAssertion }
+func (ClientAssertionScheme) Kind() Kind { return CredClientAssertion }
 
 type ClientAssertionVerifier struct{}
 
-func (v *ClientAssertionVerifier) Kind() CredentialKind { return CredClientAssertion }
+func (v *ClientAssertionVerifier) Kind() Kind { return CredClientAssertion }
 
-func (v *ClientAssertionVerifier) Verify(ctx context.Context, in InputCredentials, schemes []ValidationScheme) (Principal, error) {
+func (v *ClientAssertionVerifier) Verify(ctx context.Context, in Input, schemes []Scheme) (Principal, error) {
 	clientAssertionInput, ok := in.(ClientAssertionInput)
 	if !ok {
 		logx.L().Debug("could not cast InputCredentials to ClientAssertionInput", "context", ctx)

@@ -9,15 +9,15 @@ var ErrInvalidCredentials = errors.New("invalid credentials")
 var ErrInvalidInput = errors.New("bad input")
 var ErrInternal = errors.New("internal error")
 
-type CredentialKind string
+type Kind string
 
 const (
-	CredPassword        CredentialKind = "password"
-	CredClientSecret    CredentialKind = "client_secret"
-	CredClientAssertion CredentialKind = "client_assertion"
-	CredJWT             CredentialKind = "jwt"
-	CredMTLS            CredentialKind = "mtls"
-	CredSAMLRequest     CredentialKind = "saml_request"
+	CredPassword        Kind = "password"
+	CredClientSecret    Kind = "client_secret"
+	CredClientAssertion Kind = "client_assertion"
+	CredJWT             Kind = "jwt"
+	CredMTLS            Kind = "mtls"
+	CredSAMLRequest     Kind = "saml_request"
 )
 
 type SubjectID string
@@ -28,26 +28,26 @@ type Principal struct {
 }
 
 // -- input --
-type InputCredentials interface {
-	Kind() CredentialKind
+type Input interface {
+	Kind() Kind
 }
 
 // -- validation --
-type ValidationScheme interface {
-	Kind() CredentialKind
+type Scheme interface {
+	Kind() Kind
 }
 type Verifier interface {
-	Kind() CredentialKind
-	Verify(ctx context.Context, in InputCredentials, stored []ValidationScheme) (Principal, error)
+	Kind() Kind
+	Verify(ctx context.Context, in Input, stored []Scheme) (Principal, error)
 }
 
 // -- issue --
 type IssueScheme interface {
-	Kind() CredentialKind
+	Kind() Kind
 }
 
 type IssueParams interface {
-	Kind() CredentialKind
+	Kind() Kind
 }
 
 type ArtifactKind string
@@ -69,6 +69,6 @@ type Artifact struct {
 }
 
 type Issuer interface {
-	Kind() CredentialKind
+	Kind() Kind
 	Issue(ctx context.Context, principal Principal, scheme IssueScheme, issueParams IssueParams) ([]Artifact, error)
 }

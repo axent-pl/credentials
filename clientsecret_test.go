@@ -13,8 +13,8 @@ func TestClientSecretVerifier_Verify(t *testing.T) {
 	validPasswordHash, _ := bcrypt.GenerateFromPassword([]byte(validPassword), 0)
 	tests := []struct {
 		name    string
-		in      auth.InputCredentials
-		stored  []auth.ValidationScheme
+		in      auth.Input
+		stored  []auth.Scheme
 		want    auth.Principal
 		wantErr bool
 	}{
@@ -24,7 +24,7 @@ func TestClientSecretVerifier_Verify(t *testing.T) {
 				ClientID:     "acme",
 				ClientSecret: validPassword,
 			},
-			stored: []auth.ValidationScheme{
+			stored: []auth.Scheme{
 				auth.ClientSecretStored{
 					ClientID:   "acme",
 					SecretHash: validPasswordHash,
@@ -39,7 +39,7 @@ func TestClientSecretVerifier_Verify(t *testing.T) {
 				ClientID:     "acme",
 				ClientSecret: validPassword,
 			},
-			stored: []auth.ValidationScheme{
+			stored: []auth.Scheme{
 				auth.ClientSecretStored{
 					ClientID:   "acme-other",
 					SecretHash: validPasswordHash,
@@ -54,7 +54,7 @@ func TestClientSecretVerifier_Verify(t *testing.T) {
 				ClientID:     "acme",
 				ClientSecret: "invalid password",
 			},
-			stored: []auth.ValidationScheme{
+			stored: []auth.Scheme{
 				auth.ClientSecretStored{
 					ClientID:   "acme",
 					SecretHash: validPasswordHash,
@@ -66,7 +66,7 @@ func TestClientSecretVerifier_Verify(t *testing.T) {
 		{
 			name: "empty input credentials",
 			in:   auth.ClientSecretInput{},
-			stored: []auth.ValidationScheme{
+			stored: []auth.Scheme{
 				auth.ClientSecretStored{
 					ClientID:   "acme",
 					SecretHash: validPasswordHash,
@@ -78,7 +78,7 @@ func TestClientSecretVerifier_Verify(t *testing.T) {
 		{
 			name: "invalid input credentials kind",
 			in:   auth.JWTInput{},
-			stored: []auth.ValidationScheme{
+			stored: []auth.Scheme{
 				auth.ClientSecretStored{
 					ClientID:   "acme",
 					SecretHash: validPasswordHash,

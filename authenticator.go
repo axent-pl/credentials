@@ -4,10 +4,10 @@ import "context"
 
 type Authenticator struct {
 	Provider  ValidationSchemeProvider
-	Verifiers map[CredentialKind]Verifier
+	Verifiers map[Kind]Verifier
 }
 
-func (a *Authenticator) Authenticate(ctx context.Context, in InputCredentials) (Principal, error) {
+func (a *Authenticator) Authenticate(ctx context.Context, in Input) (Principal, error) {
 	kind := in.Kind()
 
 	verifier, ok := a.Verifiers[kind]

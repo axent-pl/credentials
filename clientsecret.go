@@ -12,20 +12,20 @@ type ClientSecretInput struct {
 	ClientSecret string
 }
 
-func (ClientSecretInput) Kind() CredentialKind { return CredClientSecret }
+func (ClientSecretInput) Kind() Kind { return CredClientSecret }
 
 type ClientSecretStored struct {
 	ClientID   string
 	SecretHash []byte
 }
 
-func (ClientSecretStored) Kind() CredentialKind { return CredClientSecret }
+func (ClientSecretStored) Kind() Kind { return CredClientSecret }
 
 type ClientSecretVerifier struct{}
 
-func (v *ClientSecretVerifier) Kind() CredentialKind { return CredClientSecret }
+func (v *ClientSecretVerifier) Kind() Kind { return CredClientSecret }
 
-func (v *ClientSecretVerifier) Verify(ctx context.Context, in InputCredentials, stored []ValidationScheme) (Principal, error) {
+func (v *ClientSecretVerifier) Verify(ctx context.Context, in Input, stored []Scheme) (Principal, error) {
 	clientSecretInput, ok := in.(ClientSecretInput)
 	if !ok {
 		logx.L().Debug("could not cast InputCredentials to ClientSecretInput", "context", ctx)

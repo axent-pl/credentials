@@ -12,20 +12,20 @@ type UserPasswordInput struct {
 	Password string
 }
 
-func (UserPasswordInput) Kind() CredentialKind { return CredPassword }
+func (UserPasswordInput) Kind() Kind { return CredPassword }
 
 type UserPasswordScheme struct {
 	Username     string
 	PasswordHash []byte
 }
 
-func (UserPasswordScheme) Kind() CredentialKind { return CredPassword }
+func (UserPasswordScheme) Kind() Kind { return CredPassword }
 
 type UserPasswordVerifier struct{}
 
-func (v *UserPasswordVerifier) Kind() CredentialKind { return CredPassword }
+func (v *UserPasswordVerifier) Kind() Kind { return CredPassword }
 
-func (v *UserPasswordVerifier) Verify(ctx context.Context, in InputCredentials, schemes []ValidationScheme) (Principal, error) {
+func (v *UserPasswordVerifier) Verify(ctx context.Context, in Input, schemes []Scheme) (Principal, error) {
 	userPasswordInput, ok := in.(UserPasswordInput)
 	if !ok {
 		logx.L().Debug("could not cast InputCredentials to UserPasswordInput", "context", ctx)

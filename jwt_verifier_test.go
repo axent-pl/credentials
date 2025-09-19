@@ -27,8 +27,8 @@ func TestJWTVerifier_Verify(t *testing.T) {
 	tests := []struct {
 		name string // description of this test case
 		// Named input parameters for target function.
-		in      auth.InputCredentials
-		schemes []auth.ValidationScheme
+		in      auth.Input
+		schemes []auth.Scheme
 		want    auth.Principal
 		wantErr bool
 	}{
@@ -37,7 +37,7 @@ func TestJWTVerifier_Verify(t *testing.T) {
 			in: auth.JWTInput{
 				Token: string(accessToken.Bytes),
 			},
-			schemes: []auth.ValidationScheme{
+			schemes: []auth.Scheme{
 				auth.JWTScheme{
 					Keys: []auth.JWTSchemeKey{
 						{

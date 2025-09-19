@@ -25,7 +25,7 @@ type JWTIssueSchemeKey struct {
 	PrivateKey crypto.PrivateKey
 }
 
-func (JWTIssueScheme) Kind() CredentialKind { return CredJWT }
+func (JWTIssueScheme) Kind() Kind { return CredJWT }
 
 // -- issue params
 type JWTIssueParams struct {
@@ -39,13 +39,13 @@ type JWTIssueParams struct {
 	RefreshOverlayClaims  map[string]any
 }
 
-func (JWTIssueParams) Kind() CredentialKind { return CredJWT }
+func (JWTIssueParams) Kind() Kind { return CredJWT }
 
 // issuer
 type JWTIssuer struct {
 }
 
-func (JWTIssuer) Kind() CredentialKind { return CredJWT }
+func (JWTIssuer) Kind() Kind { return CredJWT }
 
 func (iss *JWTIssuer) Issue(ctx context.Context, principal Principal, scheme IssueScheme, issueParams IssueParams) ([]Artifact, error) {
 	jwtIssueScheme, ok := scheme.(JWTIssueScheme)
