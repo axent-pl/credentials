@@ -13,7 +13,7 @@ func TestClientSecretVerifier_Verify(t *testing.T) {
 	validPasswordHash, _ := bcrypt.GenerateFromPassword([]byte(validPassword), 0)
 	tests := []struct {
 		name    string
-		in      auth.Input
+		in      auth.Credentials
 		stored  []auth.Scheme
 		want    auth.Principal
 		wantErr bool

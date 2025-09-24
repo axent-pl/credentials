@@ -27,7 +27,7 @@ func TestJWTVerifier_Verify(t *testing.T) {
 	tests := []struct {
 		name string // description of this test case
 		// Named input parameters for target function.
-		in      auth.Input
+		in      auth.Credentials
 		schemes []auth.Scheme
 		want    auth.Principal
 		wantErr bool

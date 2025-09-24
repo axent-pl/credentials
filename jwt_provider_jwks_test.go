@@ -70,7 +70,7 @@ func TestJWKSProvider_ValidationSchemes(t *testing.T) {
 	})
 	tests := []struct {
 		name     string
-		in       auth.Input
+		in       auth.Credentials
 		wantTest func([]auth.Scheme) error
 		wantErr  bool
 	}{

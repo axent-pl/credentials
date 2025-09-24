@@ -54,7 +54,7 @@ type ClientAssertionVerifier struct{}
 
 func (v *ClientAssertionVerifier) Kind() Kind { return CredClientAssertion }
 
-func (v *ClientAssertionVerifier) Verify(ctx context.Context, in Input, schemes []Scheme) (Principal, error) {
+func (v *ClientAssertionVerifier) Verify(ctx context.Context, in Credentials, schemes []Scheme) (Principal, error) {
 	clientAssertionInput, ok := in.(ClientAssertionInput)
 	if !ok {
 		logx.L().Debug("could not cast InputCredentials to ClientAssertionInput", "context", ctx)

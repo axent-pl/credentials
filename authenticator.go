@@ -7,7 +7,7 @@ type Authenticator struct {
 	Verifiers map[Kind]Verifier
 }
 
-func (a *Authenticator) Authenticate(ctx context.Context, in Input) (Principal, error) {
+func (a *Authenticator) Authenticate(ctx context.Context, in Credentials) (Principal, error) {
 	kind := in.Kind()
 
 	verifier, ok := a.Verifiers[kind]

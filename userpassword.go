@@ -25,7 +25,7 @@ type UserPasswordVerifier struct{}
 
 func (v *UserPasswordVerifier) Kind() Kind { return CredPassword }
 
-func (v *UserPasswordVerifier) Verify(ctx context.Context, in Input, schemes []Scheme) (Principal, error) {
+func (v *UserPasswordVerifier) Verify(ctx context.Context, in Credentials, schemes []Scheme) (Principal, error) {
 	userPasswordInput, ok := in.(UserPasswordInput)
 	if !ok {
 		logx.L().Debug("could not cast InputCredentials to UserPasswordInput", "context", ctx)

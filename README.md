@@ -24,3 +24,8 @@ accessToken, _ := ArtifactWithKind(artifacts, ArtifactAccessToken)
 ```golang
 
 ```
+
+
+### Standards
+
+ [iana](https://www.iana.org/assignments/oauth-parameters/oauth-parameters.xhtml)

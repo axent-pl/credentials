@@ -18,6 +18,7 @@ const (
 	CredJWT             Kind = "jwt"
 	CredMTLS            Kind = "mtls"
 	CredSAMLRequest     Kind = "saml_request"
+	CredSAMLResponse    Kind = "saml_response"
 )
 
 type SubjectID string
@@ -28,7 +29,7 @@ type Principal struct {
 }
 
 // -- input --
-type Input interface {
+type Credentials interface {
 	Kind() Kind
 }
 
@@ -38,7 +39,7 @@ type Scheme interface {
 }
 type Verifier interface {
 	Kind() Kind
-	Verify(ctx context.Context, in Input, stored []Scheme) (Principal, error)
+	Verify(ctx context.Context, in Credentials, stored []Scheme) (Principal, error)
 }
 
 // -- issue --

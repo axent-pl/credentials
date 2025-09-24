@@ -14,7 +14,7 @@ type JWTVerifier struct{}
 
 func (v *JWTVerifier) Kind() Kind { return CredJWT }
 
-func (v *JWTVerifier) Verify(ctx context.Context, in Input, schemes []Scheme) (Principal, error) {
+func (v *JWTVerifier) Verify(ctx context.Context, in Credentials, schemes []Scheme) (Principal, error) {
 	jwtInput, ok := in.(JWTInput)
 	if !ok {
 		logx.L().Debug("could not cast InputCredentials to JWTInput", "context", ctx)

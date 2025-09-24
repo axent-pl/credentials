@@ -25,7 +25,7 @@ type ClientSecretVerifier struct{}
 
 func (v *ClientSecretVerifier) Kind() Kind { return CredClientSecret }
 
-func (v *ClientSecretVerifier) Verify(ctx context.Context, in Input, stored []Scheme) (Principal, error) {
+func (v *ClientSecretVerifier) Verify(ctx context.Context, in Credentials, stored []Scheme) (Principal, error) {
 	clientSecretInput, ok := in.(ClientSecretInput)
 	if !ok {
 		logx.L().Debug("could not cast InputCredentials to ClientSecretInput", "context", ctx)
