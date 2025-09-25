@@ -2,38 +2,98 @@ package auth
 
 import "encoding/xml"
 
-// SAML request is used to authenticate the issuer (client) which requests user credentials (a SAMLResponse with Assertion)
-
+// SAMLRequestInput represents the HTTP request parameters typically passed
+// in a SAML AuthnRequest (usually sent via Redirect or POST binding).
 type SAMLRequestInput struct {
+	// SAMLRequest: Required.
+	// The actual base64-encoded (and often deflated) XML AuthnRequest message.
 	SAMLRequest string
-	RelayState  string
-	SigAlg      string
-	Signature   string
+
+	// RelayState: Optional (but commonly used).
+	// An opaque value sent by the Service Provider (SP) and returned unchanged
+	// by the Identity Provider (IdP). Typically used for preserving state (e.g. return URL).
+	RelayState string
+
+	// SigAlg: Optional.
+	// The signature algorithm URI (e.g., RSA-SHA256) used when the SAMLRequest
+	// is signed in HTTP-Redirect binding. Required if "Signature" is present.
+	SigAlg string
+
+	// Signature: Optional.
+	// The base64-encoded signature computed over the query parameters.
+	// Used only with signed Redirect binding requests.
+	Signature string
 }
 
 func (SAMLRequestInput) Kind() Kind { return CredSAMLRequest }
 
+// SAMLRequestXML represents the XML <AuthnRequest> element
+// defined in SAML 2.0 Core specification (protocol namespace).
 type SAMLRequestXML struct {
-	XMLName                     xml.Name                    `xml:"urn:oasis:names:tc:SAML:2.0:protocol AuthnRequest"`
-	ID                          string                      `xml:"ID,attr"`
-	Version                     string                      `xml:"Version,attr"`
-	IssueInstant                string                      `xml:"IssueInstant,attr"`
-	Destination                 string                      `xml:"Destination,attr,omitempty"`
-	AssertionConsumerServiceURL string                      `xml:"AssertionConsumerServiceURL,attr,omitempty"`
-	ProtocolBinding             string                      `xml:"ProtocolBinding,attr,omitempty"`
-	ForceAuthn                  *bool                       `xml:"ForceAuthn,attr,omitempty"`
-	IsPassive                   *bool                       `xml:"IsPassive,attr,omitempty"`
-	Issuer                      *SAMLRequestIssuerXML       `xml:"urn:oasis:names:tc:SAML:2.0:assertion Issuer,omitempty"`
-	NameIDPolicy                *SAMLRequestNameIDPolicyXML `xml:"urn:oasis:names:tc:SAML:2.0:protocol NameIDPolicy,omitempty"`
+	XMLName xml.Name `xml:"urn:oasis:names:tc:SAML:2.0:protocol AuthnRequest"`
+
+	// ID: Required.
+	// Unique identifier for the request, must be a unique string.
+	ID string `xml:"ID,attr"`
+
+	// Version: Required.
+	// SAML protocol version (must be "2.0").
+	Version string `xml:"Version,attr"`
+
+	// IssueInstant: Required.
+	// The time instant when the request was created, in UTC ISO8601 format.
+	IssueInstant string `xml:"IssueInstant,attr"`
+
+	// Destination: Optional.
+	// URI of the IdP endpoint where the AuthnRequest is being sent.
+	Destination string `xml:"Destination,attr,omitempty"`
+
+	// AssertionConsumerServiceURL: Optional (but usually required by SPs).
+	// The URL at the SP to which the IdP should send the SAML Response.
+	AssertionConsumerServiceURL string `xml:"AssertionConsumerServiceURL,attr,omitempty"`
+
+	// ProtocolBinding: Optional.
+	// URI specifying the binding (e.g., HTTP-POST, HTTP-Artifact) expected for the response.
+	ProtocolBinding string `xml:"ProtocolBinding,attr,omitempty"`
+
+	// ForceAuthn: Optional.
+	// If true, IdP must re-authenticate the user (ignore existing SSO session).
+	ForceAuthn *bool `xml:"ForceAuthn,attr,omitempty"`
+
+	// IsPassive: Optional.
+	// If true, IdP must not interact with the user (silent authentication only).
+	IsPassive *bool `xml:"IsPassive,attr,omitempty"`
+
+	// Issuer: Required.
+	// Identifies the SP making the request, usually an entityID (URI).
+	Issuer *SAMLRequestIssuerXML `xml:"urn:oasis:names:tc:SAML:2.0:assertion Issuer,omitempty"`
+
+	// NameIDPolicy: Optional.
+	// Specifies constraints on the NameID (e.g., email format) and whether a new
+	// identifier can be created if none exists.
+	NameIDPolicy *SAMLRequestNameIDPolicyXML `xml:"urn:oasis:names:tc:SAML:2.0:protocol NameIDPolicy,omitempty"`
 }
 
+// SAMLRequestIssuerXML represents the <Issuer> element inside an AuthnRequest.
 type SAMLRequestIssuerXML struct {
 	XMLName xml.Name `xml:"urn:oasis:names:tc:SAML:2.0:assertion Issuer"`
-	Value   string   `xml:",chardata"`
+
+	// Value: Required.
+	// The actual entityID string (usually a URI) identifying the Service Provider.
+	Value string `xml:",chardata"`
 }
 
+// SAMLRequestNameIDPolicyXML represents the <NameIDPolicy> element,
+// which tells the IdP how the subject identifier should be constructed.
 type SAMLRequestNameIDPolicyXML struct {
-	XMLName     xml.Name `xml:"urn:oasis:names:tc:SAML:2.0:protocol NameIDPolicy"`
-	Format      string   `xml:"Format,attr,omitempty"`
-	AllowCreate *bool    `xml:"AllowCreate,attr,omitempty"`
+	XMLName xml.Name `xml:"urn:oasis:names:tc:SAML:2.0:protocol NameIDPolicy"`
+
+	// Format: Optional.
+	// Specifies the desired NameID format (e.g., emailAddress, persistent, transient).
+	Format string `xml:"Format,attr,omitempty"`
+
+	// AllowCreate: Optional.
+	// If true, IdP is allowed to create a new identifier for the subject
+	// if no suitable existing identifier is found.
+	AllowCreate *bool `xml:"AllowCreate,attr,omitempty"`
 }
