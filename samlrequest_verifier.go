@@ -48,9 +48,10 @@ func (v *SAMLRequestVerifier) Verify(ctx context.Context, in Credentials, scheme
 		if samlRequestXML.Issuer.Value == "" {
 			continue
 		}
+		return Principal{Subject: SubjectID(samlRequestXML.Issuer.Value)}, nil
 	}
 
-	return Principal{}, nil
+	return Principal{}, ErrInvalidCredentials
 }
 
 func (v *SAMLRequestVerifier) VerifySignature(r SAMLRequestInput, s SAMLRequestScheme) error {
@@ -85,12 +86,12 @@ func (v *SAMLRequestVerifier) VerifySignature(r SAMLRequestInput, s SAMLRequestS
 
 		switch keyType {
 		case "rsa":
-			pub, ok := k.Key.(*rsa.PublicKey)
+			pub, ok := k.Key.(rsa.PublicKey)
 			if !ok {
 				// sometimes keys might be x509.PublicKey from certs; try to extract
 				switch pk := k.Key.(type) {
 				case *x509.Certificate:
-					if rsaPub, ok := pk.PublicKey.(*rsa.PublicKey); ok {
+					if rsaPub, ok := pk.PublicKey.(rsa.PublicKey); ok {
 						pub = rsaPub
 					} else {
 						continue
@@ -99,16 +100,16 @@ func (v *SAMLRequestVerifier) VerifySignature(r SAMLRequestInput, s SAMLRequestS
 					continue
 				}
 			}
-			if err := rsa.VerifyPKCS1v15(pub, hashAlg, digest, signature); err == nil {
+			if err := rsa.VerifyPKCS1v15(&pub, hashAlg, digest, signature); err == nil {
 				return nil
 			}
 
 		case "ecdsa":
-			pub, ok := k.Key.(*ecdsa.PublicKey)
+			pub, ok := k.Key.(ecdsa.PublicKey)
 			if !ok {
 				switch pk := k.Key.(type) {
 				case *x509.Certificate:
-					if ecPub, ok := pk.PublicKey.(*ecdsa.PublicKey); ok {
+					if ecPub, ok := pk.PublicKey.(ecdsa.PublicKey); ok {
 						pub = ecPub
 					} else {
 						continue
@@ -124,7 +125,7 @@ func (v *SAMLRequestVerifier) VerifySignature(r SAMLRequestInput, s SAMLRequestS
 			if _, err := asn1.Unmarshal(signature, &esig); err != nil || esig.R == nil || esig.S == nil {
 				continue
 			}
-			if ecdsa.Verify(pub, digest, esig.R, esig.S) {
+			if ecdsa.Verify(&pub, digest, esig.R, esig.S) {
 				return nil
 			}
 		}

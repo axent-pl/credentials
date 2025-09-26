@@ -6,6 +6,7 @@ import (
 	"crypto/ecdsa"
 	"crypto/rand"
 	"crypto/rsa"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"net/url"
@@ -104,7 +105,7 @@ func (iss *SAMLRequestIssuer) Issue(ctx context.Context, _ Principal, scheme Iss
 			logx.L().Error("could not sign SAMLRequest", "context", ctx, "error", err)
 			return nil, ErrInternal
 		}
-		samlRequest.Signature = string(signature)
+		samlRequest.Signature = signature
 	}
 
 	samlRequestURI, err := iss.buildSAMLRequestURI(samlIssueParams.Destination, samlRequest)
@@ -125,7 +126,7 @@ func (iss *SAMLRequestIssuer) Issue(ctx context.Context, _ Principal, scheme Iss
 	return artifacts, nil
 }
 
-func (iss *SAMLRequestIssuer) Sign(r SAMLRequestInput, key *SAMLRequestIssueSchemeKey) ([]byte, error) {
+func (iss *SAMLRequestIssuer) Sign(r SAMLRequestInput, key *SAMLRequestIssueSchemeKey) (string, error) {
 	_, _ = SAMLSigAlg(key.PrivateKey, key.HashAlg)
 	signedData := r.SignedQuery()
 	digest, _ := hashSAMLSignedData(signedData, key.HashAlg)
@@ -140,15 +141,15 @@ func (iss *SAMLRequestIssuer) Sign(r SAMLRequestInput, key *SAMLRequestIssueSche
 
 	signer, ok := key.PrivateKey.(crypto.Signer)
 	if !ok {
-		return nil, errors.New("could not sign SAML request: key does not implement crypto.Signer")
+		return "", errors.New("could not sign SAML request: key does not implement crypto.Signer")
 	}
 
 	signature, err := signer.Sign(rand.Reader, digest, opts)
 	if err != nil {
-		return nil, fmt.Errorf("could not sign SAML request: %w", err)
+		return "", fmt.Errorf("could not sign SAML request: %w", err)
 	}
 
-	return signature, nil
+	return base64.StdEncoding.EncodeToString(signature), nil
 }
 
 func (iss *SAMLRequestIssuer) buildSAMLRequestURI(destination string, in SAMLRequestInput) (string, error) {

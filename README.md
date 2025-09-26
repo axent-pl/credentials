@@ -2,10 +2,7 @@
 
 ### JWT Issue
 ```golang
-signatureKey, err := rsa.GenerateKey(rand.Reader, 2048)
-if err != nil {
-
-}
+signatureKey, _ := rsa.GenerateKey(rand.Reader, 2048)
 issueScheme := JWTIssueScheme{
     Issuer: "acme-issuer",
     Exp:    20 * time.Second,
@@ -14,9 +11,8 @@ issueScheme := JWTIssueScheme{
         Alg:        "RS256",
     },
 }
-issueParams := JWTIssueParams{}
 issuer := JWTIssuer{}
-artifacts, _ := issuer.Issue(context.Background(), Principal{Subject: "subject-id"}, issueScheme, issueParams)
+artifacts, _ := issuer.Issue(context.Background(), Principal{Subject: "subject-id"}, issueScheme, JWTIssueParams{})
 accessToken, _ := ArtifactWithKind(artifacts, ArtifactAccessToken)
 ```
 
