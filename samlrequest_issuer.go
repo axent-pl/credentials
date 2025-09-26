@@ -1,12 +1,12 @@
 package auth
 
 import (
-	"bytes"
-	"compress/flate"
 	"context"
 	"crypto"
-	"encoding/base64"
-	"encoding/xml"
+	"crypto/ecdsa"
+	"crypto/rand"
+	"crypto/rsa"
+	"errors"
 	"fmt"
 	"time"
 
@@ -16,7 +16,7 @@ import (
 type SAMLRequestIssueScheme struct {
 	// The actual entityID string (usually a URI) identifying the Service Provider.
 	Issuer string
-	Key    SAMLRequestIssueSchemeKey
+	Key    *SAMLRequestIssueSchemeKey
 }
 
 func (SAMLRequestIssueScheme) Kind() Kind { return CredSAMLRequest }
@@ -56,7 +56,7 @@ type SAMLRequestIssuer struct {
 
 func (SAMLRequestIssuer) Kind() Kind { return CredSAMLRequest }
 
-func (iss *SAMLRequestIssuer) Issue(ctx context.Context, principal Principal, scheme IssueScheme, issueParams IssueParams) ([]Artifact, error) {
+func (iss *SAMLRequestIssuer) Issue(ctx context.Context, _ Principal, scheme IssueScheme, issueParams IssueParams) ([]Artifact, error) {
 	samlIssueScheme, ok := scheme.(SAMLRequestIssueScheme)
 	if !ok {
 		logx.L().Debug("could not cast IssueScheme to SAMLRequestIssueScheme", "context", ctx)
@@ -76,20 +76,37 @@ func (iss *SAMLRequestIssuer) Issue(ctx context.Context, principal Principal, sc
 		IssueInstant:                time.Now().Format(time.RFC3339),
 		Destination:                 samlIssueParams.Destination,
 		AssertionConsumerServiceURL: samlIssueParams.AssertionConsumerServiceURL,
-		// ProtocolBinding: "",
-		// ForceAuthn: nil,
-		// IsPassive: nil,
+		ProtocolBinding:             samlIssueParams.ProtocolBinding,
+		ForceAuthn:                  samlIssueParams.ForceAuthn,
+		IsPassive:                   samlIssueParams.IsPassive,
 		Issuer: &SAMLRequestIssuerXML{
 			Value: samlIssueScheme.Issuer,
 		},
 	}
-	samlRequestXMLEncoded, err := encodeSAMLRequestXML(samlRequestXML)
-	if err != nil {
+	// marshal SAMLRequestXML
+	if err := samlRequest.MarshalSAMLRequest(samlRequestXML); err != nil {
 		logx.L().Error("could not encode SAMLRequestXML", "context", ctx, "error", err)
 		return nil, ErrInternal
 	}
-	samlRequest.SAMLRequest = samlRequestXMLEncoded
-	signedData := buildSignedQuery(samlRequest)
+	// sign if signature key provided in scheme
+	if samlIssueScheme.Key != nil {
+		// determine SigAlg
+		sigAlg, err := SAMLSigAlg(samlIssueScheme.Key.PrivateKey, samlIssueScheme.Key.HashAlg)
+		if err != nil {
+			logx.L().Error("could not determine SAMLRequest SigAlg", "context", ctx, "error", err)
+			return nil, ErrInternal
+		}
+		// sign
+		samlRequest.SigAlg = sigAlg
+		signature, err := iss.Sign(samlRequest, samlIssueScheme.Key)
+		if err != nil {
+			logx.L().Error("could not sign SAMLRequest", "context", ctx, "error", err)
+			return nil, ErrInternal
+		}
+		samlRequest.Signature = string(signature)
+	}
+
+	signedData := samlRequest.SignedQuery()
 
 	fmt.Println(samlIssueScheme)
 	fmt.Println(samlIssueParams)
@@ -100,24 +117,61 @@ func (iss *SAMLRequestIssuer) Issue(ctx context.Context, principal Principal, sc
 	return nil, nil
 }
 
-func encodeSAMLRequestXML(req SAMLRequestXML) (string, error) {
-	xmlBytes, err := xml.Marshal(req) // compact; keep it deterministic
+func (iss *SAMLRequestIssuer) Sign(r SAMLRequestInput, key *SAMLRequestIssueSchemeKey) ([]byte, error) {
+	_, _ = SAMLSigAlg(key.PrivateKey, key.HashAlg)
+	signedData := r.SignedQuery()
+	digest, _ := hashSAMLSignedData(signedData, key.HashAlg)
+
+	var opts crypto.SignerOpts
+	switch key.PrivateKey.(type) {
+	case *rsa.PrivateKey:
+		opts = crypto.SignerOpts(key.HashAlg) // nil vs. hashAlg both OK for RSA in practice; hashAlg carries the hash choice
+	default:
+		opts = key.HashAlg
+	}
+
+	signer, ok := key.PrivateKey.(crypto.Signer)
+	if !ok {
+		return nil, errors.New("could not sign SAML request: key does not implement crypto.Signer")
+	}
+
+	signature, err := signer.Sign(rand.Reader, digest, opts)
 	if err != nil {
-		return "", err
+		return nil, fmt.Errorf("could not sign SAML request: %w", err)
 	}
-	var deflated bytes.Buffer
-	// HTTP-Redirect uses raw DEFLATE (RFC1951) (no zlib header/footer),
-	// which compress/flate writes by default.
-	w, err := flate.NewWriter(&deflated, flate.DefaultCompression)
-	if err != nil {
-		return "", err
+
+	return signature, nil
+}
+
+func SAMLSigAlg(privKey crypto.PrivateKey, hashAlg crypto.Hash) (string, error) {
+	switch privKey.(type) {
+	case *rsa.PrivateKey:
+		switch hashAlg {
+		case crypto.SHA1:
+			return "http://www.w3.org/2000/09/xmldsig#rsa-sha1", nil
+		case crypto.SHA256:
+			return "http://www.w3.org/2001/04/xmldsig-more#rsa-sha256", nil
+		case crypto.SHA384:
+			return "http://www.w3.org/2001/04/xmldsig-more#rsa-sha384", nil
+		case crypto.SHA512:
+			return "http://www.w3.org/2001/04/xmldsig-more#rsa-sha512", nil
+		default:
+			return "", fmt.Errorf("unsupported RSA hash: %v", hashAlg)
+		}
+
+	case *ecdsa.PrivateKey:
+		switch hashAlg {
+		case crypto.SHA256:
+			return "http://www.w3.org/2001/04/xmldsig-more#ecdsa-sha256", nil
+		case crypto.SHA384:
+			return "http://www.w3.org/2001/04/xmldsig-more#ecdsa-sha384", nil
+		case crypto.SHA512:
+			return "http://www.w3.org/2001/04/xmldsig-more#ecdsa-sha512", nil
+		default:
+			return "", fmt.Errorf("unsupported ECDSA hash: %v", hashAlg)
+		}
+
+	default:
+		return "", errors.New("unsupported key type")
 	}
-	if _, err := w.Write(xmlBytes); err != nil {
-		_ = w.Close()
-		return "", err
-	}
-	if err := w.Close(); err != nil {
-		return "", err
-	}
-	return base64.StdEncoding.EncodeToString(deflated.Bytes()), nil
 }

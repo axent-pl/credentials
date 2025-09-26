@@ -1,9 +1,6 @@
 package auth
 
 import (
-	"bytes"
-	"compress/flate"
-	"compress/zlib"
 	"context"
 	"crypto"
 	"crypto/ecdsa"
@@ -14,12 +11,8 @@ import (
 	"crypto/x509"
 	"encoding/asn1"
 	"encoding/base64"
-	"encoding/xml"
 	"errors"
-	"io"
 	"math/big"
-	"net/url"
-	"strings"
 
 	"github.com/axent-pl/auth/logx"
 )
@@ -38,7 +31,7 @@ func (v *SAMLRequestVerifier) Verify(ctx context.Context, in Credentials, scheme
 		logx.L().Debug("empty request", "context", ctx)
 		return Principal{}, ErrInvalidInput
 	}
-	samlRequestXML, err := v.ParseSAMLRequest(samlRequestInput.SAMLRequest)
+	samlRequestXML, err := samlRequestInput.UnmarshalSAMLRequest()
 	if err != nil {
 		logx.L().Debug("could not parse SAML request", "context", ctx, "error", err)
 		return Principal{}, ErrInvalidInput
@@ -74,7 +67,7 @@ func (v *SAMLRequestVerifier) VerifySignature(r SAMLRequestInput, s SAMLRequestS
 		return errors.New("missing signature")
 	}
 	// parse signature algorithm (keyType, hashAlg)
-	keyType, hashAlg, err := parseSigAlg(r.SigAlg)
+	keyType, hashAlg, err := parseSAMLSigAlg(r.SigAlg)
 	if err != nil {
 		return err
 	}
@@ -140,70 +133,22 @@ func (v *SAMLRequestVerifier) VerifySignature(r SAMLRequestInput, s SAMLRequestS
 	return errors.New("invalid signature")
 }
 
-func (v *SAMLRequestVerifier) ParseSAMLRequest(enc string) (*SAMLRequestXML, error) {
-	// 1) Base64 decode
-	compressed, err := base64.StdEncoding.DecodeString(enc)
-	if err != nil {
-		// Try URL-safe alphabet just in case
-		compressed, err = base64.URLEncoding.DecodeString(enc)
-		if err != nil {
-			return nil, errors.New("invalid base64 in SAMLRequest")
-		}
-	}
-
-	// 2) Inflate (Redirect binding uses raw DEFLATE; some stacks use zlib wrapper)
-	xmlBytes, inflateErr := v.inflateRawDeflate(compressed)
-	if inflateErr != nil {
-		// fallback to zlib (RFC1950)
-		if xmlBytes, err = v.inflateZlib(compressed); err != nil {
-			// If both fail, it might be POST binding (no compression) — accept as-is if it looks like XML
-			if v.looksLikeXML(compressed) {
-				xmlBytes = compressed
-			} else {
-				return nil, errors.New("unable to inflate SAMLRequest (tried DEFLATE and zlib)")
-			}
-		}
-	}
-
-	// 3) Unmarshal XML
-	var req SAMLRequestXML
-	if err := xml.Unmarshal(xmlBytes, &req); err != nil {
-		return nil, err
-	}
-	return &req, nil
-}
-
-func (v *SAMLRequestVerifier) inflateRawDeflate(b []byte) ([]byte, error) {
-	r := flate.NewReader(bytes.NewReader(b))
-	defer r.Close()
-	return io.ReadAll(r)
-}
-
-func (v *SAMLRequestVerifier) inflateZlib(b []byte) ([]byte, error) {
-	r, err := zlib.NewReader(bytes.NewReader(b))
-	if err != nil {
-		return nil, err
-	}
-	defer r.Close()
-	return io.ReadAll(r)
-}
-
-func (v *SAMLRequestVerifier) looksLikeXML(b []byte) bool {
-	// Trim a tiny bit of whitespace and check for '<'
-	i := 0
-	for i < len(b) && (b[i] == ' ' || b[i] == '\n' || b[i] == '\r' || b[i] == '\t') {
-		i++
-	}
-	return i < len(b) && b[i] == '<'
-}
-
 // parse Signature
 func parseSignature(r SAMLRequestInput, hashAlg crypto.Hash) (signature []byte, digest []byte, _ error) {
-	signedData := buildSignedQuery(r)
+	signedData := r.SignedQuery()
 	signature, err := base64.StdEncoding.DecodeString(r.Signature)
 	if err != nil {
 		return nil, nil, errors.New("invalid signature encoding")
 	}
+	digest, err = hashSAMLSignedData(signedData, hashAlg)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return signature, digest, nil
+}
+
+func hashSAMLSignedData(signedData []byte, hashAlg crypto.Hash) (digest []byte, _ error) {
 	switch hashAlg {
 	case crypto.SHA1:
 		sum := sha1.Sum(signedData)
@@ -222,13 +167,13 @@ func parseSignature(r SAMLRequestInput, hashAlg crypto.Hash) (signature []byte, 
 		sum := sha512.Sum512(signedData)
 		digest = sum[:]
 	default:
-		return nil, nil, errors.New("unsupported hash")
+		return nil, errors.New("unsupported hash")
 	}
-	return signature, digest, nil
+	return digest, nil
 }
 
 // map SigAlg URI -> (scheme, hash)
-func parseSigAlg(uri string) (keyType string, hashAlg crypto.Hash, _ error) {
+func parseSAMLSigAlg(uri string) (keyType string, hashAlg crypto.Hash, _ error) {
 	switch uri {
 	// RSA PKCS#1 v1.5
 	case "http://www.w3.org/2000/09/xmldsig#rsa-sha1":
@@ -250,20 +195,4 @@ func parseSigAlg(uri string) (keyType string, hashAlg crypto.Hash, _ error) {
 	default:
 		return "", 0, errors.New("unsupported SigAlg")
 	}
-}
-
-// buildSignedQuery recreates the exact byte sequence signed for Redirect binding:
-// "SAMLRequest=<val>[&RelayState=<val>]&SigAlg=<val>"
-// Each value must be percent-encoded per RFC 3986 (same as url.QueryEscape).
-func buildSignedQuery(r SAMLRequestInput) []byte {
-	var b strings.Builder
-	b.WriteString("SAMLRequest=")
-	b.WriteString(url.QueryEscape(r.SAMLRequest))
-	if r.RelayState != "" {
-		b.WriteString("&RelayState=")
-		b.WriteString(url.QueryEscape(r.RelayState))
-	}
-	b.WriteString("&SigAlg=")
-	b.WriteString(url.QueryEscape(r.SigAlg))
-	return []byte(b.String())
 }

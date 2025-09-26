@@ -1,6 +1,16 @@
 package auth
 
-import "encoding/xml"
+import (
+	"bytes"
+	"compress/flate"
+	"compress/zlib"
+	"encoding/base64"
+	"encoding/xml"
+	"errors"
+	"io"
+	"net/url"
+	"strings"
+)
 
 // SAMLRequestInput represents the HTTP request parameters typically passed
 // in a SAML AuthnRequest (usually sent via Redirect or POST binding).
@@ -96,4 +106,102 @@ type SAMLRequestNameIDPolicyXML struct {
 	// If true, IdP is allowed to create a new identifier for the subject
 	// if no suitable existing identifier is found.
 	AllowCreate *bool `xml:"AllowCreate,attr,omitempty"`
+}
+
+// ----
+
+// SignedQuery creates the exact byte sequence signed for Redirect binding:
+// "SAMLRequest=<val>[&RelayState=<val>]&SigAlg=<val>"
+// Each value must be percent-encoded per RFC 3986 (same as url.QueryEscape).
+func (r *SAMLRequestInput) SignedQuery() []byte {
+	var b strings.Builder
+	b.WriteString("SAMLRequest=")
+	b.WriteString(url.QueryEscape(r.SAMLRequest))
+	if r.RelayState != "" {
+		b.WriteString("&RelayState=")
+		b.WriteString(url.QueryEscape(r.RelayState))
+	}
+	b.WriteString("&SigAlg=")
+	b.WriteString(url.QueryEscape(r.SigAlg))
+	return []byte(b.String())
+}
+
+func (r *SAMLRequestInput) MarshalSAMLRequest(x SAMLRequestXML) error {
+	xmlBytes, err := xml.Marshal(x) // compact; keep it deterministic
+	if err != nil {
+		return err
+	}
+	var deflated bytes.Buffer
+	// HTTP-Redirect uses raw DEFLATE (RFC1951) (no zlib header/footer),
+	// which compress/flate writes by default.
+	w, err := flate.NewWriter(&deflated, flate.DefaultCompression)
+	if err != nil {
+		return err
+	}
+	if _, err := w.Write(xmlBytes); err != nil {
+		_ = w.Close()
+		return err
+	}
+	if err := w.Close(); err != nil {
+		return err
+	}
+	r.SAMLRequest = base64.StdEncoding.EncodeToString(deflated.Bytes())
+	return nil
+}
+
+func (r *SAMLRequestInput) UnmarshalSAMLRequest() (*SAMLRequestXML, error) {
+	// 1) Base64 decode
+	compressed, err := base64.StdEncoding.DecodeString(r.SAMLRequest)
+	if err != nil {
+		// Try URL-safe alphabet just in case
+		compressed, err = base64.URLEncoding.DecodeString(r.SAMLRequest)
+		if err != nil {
+			return nil, errors.New("invalid base64 in SAMLRequest")
+		}
+	}
+
+	// 2) Inflate (Redirect binding uses raw DEFLATE; some stacks use zlib wrapper)
+	xmlBytes, inflateErr := r.inflateRawDeflate(compressed)
+	if inflateErr != nil {
+		// fallback to zlib (RFC1950)
+		if xmlBytes, err = r.inflateZlib(compressed); err != nil {
+			// If both fail, it might be POST binding (no compression) — accept as-is if it looks like XML
+			if r.looksLikeXML(compressed) {
+				xmlBytes = compressed
+			} else {
+				return nil, errors.New("unable to inflate SAMLRequest (tried DEFLATE and zlib)")
+			}
+		}
+	}
+
+	// 3) Unmarshal XML
+	var req SAMLRequestXML
+	if err := xml.Unmarshal(xmlBytes, &req); err != nil {
+		return nil, err
+	}
+	return &req, nil
+}
+
+func (v *SAMLRequestInput) inflateRawDeflate(b []byte) ([]byte, error) {
+	r := flate.NewReader(bytes.NewReader(b))
+	defer r.Close()
+	return io.ReadAll(r)
+}
+
+func (v *SAMLRequestInput) inflateZlib(b []byte) ([]byte, error) {
+	r, err := zlib.NewReader(bytes.NewReader(b))
+	if err != nil {
+		return nil, err
+	}
+	defer r.Close()
+	return io.ReadAll(r)
+}
+
+func (r *SAMLRequestInput) looksLikeXML(b []byte) bool {
+	// Trim a tiny bit of whitespace and check for '<'
+	i := 0
+	for i < len(b) && (b[i] == ' ' || b[i] == '\n' || b[i] == '\r' || b[i] == '\t') {
+		i++
+	}
+	return i < len(b) && b[i] == '<'
 }
