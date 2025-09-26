@@ -60,6 +60,7 @@ const (
 	ArtifactIdToken      ArtifactKind = "id_token"
 	// #nosec G101
 	ArtifactOAuth2TokenResponse ArtifactKind = "oauth2_token_response"
+	ArtifactSAMLRequestURI      ArtifactKind = "saml_request_uri"
 )
 
 type Artifact struct {

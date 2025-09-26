@@ -8,6 +8,7 @@ import (
 	"crypto/rsa"
 	"errors"
 	"fmt"
+	"net/url"
 	"time"
 
 	"github.com/axent-pl/auth/logx"
@@ -106,15 +107,22 @@ func (iss *SAMLRequestIssuer) Issue(ctx context.Context, _ Principal, scheme Iss
 		samlRequest.Signature = string(signature)
 	}
 
-	signedData := samlRequest.SignedQuery()
+	samlRequestURI, err := iss.buildSAMLRequestURI(samlIssueParams.Destination, samlRequest)
+	if err != nil {
+		logx.L().Error("could not build SAMLRequest URI", "context", ctx, "error", err)
+		return nil, ErrInternal
+	}
 
-	fmt.Println(samlIssueScheme)
-	fmt.Println(samlIssueParams)
-	fmt.Println(samlRequest)
-	fmt.Println(samlRequestXML)
-	fmt.Println(signedData)
+	artifacts := make([]Artifact, 0)
 
-	return nil, nil
+	// SAML request URI
+	artifacts = append(artifacts, Artifact{
+		Kind:      ArtifactSAMLRequestURI, // or a custom ArtifactRedirectURL if you define one
+		MediaType: "text/uri-list",        // standard for representing a URI
+		Bytes:     []byte(samlRequestURI),
+	})
+
+	return artifacts, nil
 }
 
 func (iss *SAMLRequestIssuer) Sign(r SAMLRequestInput, key *SAMLRequestIssueSchemeKey) ([]byte, error) {
@@ -141,6 +149,29 @@ func (iss *SAMLRequestIssuer) Sign(r SAMLRequestInput, key *SAMLRequestIssueSche
 	}
 
 	return signature, nil
+}
+
+func (iss *SAMLRequestIssuer) buildSAMLRequestURI(destination string, in SAMLRequestInput) (string, error) {
+	u, err := url.Parse(destination)
+	if err != nil {
+		return "", err
+	}
+
+	q := u.Query()
+	q.Set("SAMLRequest", in.SAMLRequest)
+
+	if in.RelayState != "" {
+		q.Set("RelayState", in.RelayState)
+	}
+	if in.SigAlg != "" {
+		q.Set("SigAlg", in.SigAlg)
+	}
+	if in.Signature != "" {
+		q.Set("Signature", in.Signature)
+	}
+
+	u.RawQuery = q.Encode()
+	return u.String(), nil
 }
 
 func SAMLSigAlg(privKey crypto.PrivateKey, hashAlg crypto.Hash) (string, error) {
