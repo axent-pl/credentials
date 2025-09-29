@@ -12,7 +12,7 @@ import (
 
 func TestJWTVerifier_Verify(t *testing.T) {
 	rsaKey, _ := rsa.GenerateKey(rand.Reader, 2048)
-	issueScheme := auth.JWTIssueScheme{
+	issueParams := auth.JWTIssueParams{
 		Issuer: "acme-issuer",
 		Exp:    20 * time.Second,
 		Key: auth.JWTIssueSchemeKey{
@@ -21,7 +21,7 @@ func TestJWTVerifier_Verify(t *testing.T) {
 		},
 	}
 	var issuer auth.JWTIssuer
-	artifacts, _ := issuer.Issue(context.Background(), auth.Principal{Subject: "subject-id"}, issueScheme, auth.JWTIssueParams{})
+	artifacts, _ := issuer.Issue(context.Background(), auth.Principal{Subject: "subject-id"}, issueParams)
 	accessToken, _ := auth.ArtifactWithKind(artifacts, auth.ArtifactAccessToken)
 
 	tests := []struct {

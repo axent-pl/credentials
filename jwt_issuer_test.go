@@ -60,17 +60,19 @@ func TestJWTIssuer_BaseClaims(t *testing.T) {
 		name string // description of this test case
 		// Named input parameters for target function.
 		principal   auth.Principal
-		scheme      auth.JWTIssueScheme
 		issueParams auth.JWTIssueParams
 		want        map[string]any
 		checks      []ClaimCheckFunction
 		wantErr     bool
 	}{
 		{
-			name:        "basic",
-			principal:   auth.Principal{Subject: "subject-id"},
-			scheme:      auth.JWTIssueScheme{Issuer: "https://acme-auth-server.com", Exp: 30 * time.Second},
-			issueParams: auth.JWTIssueParams{AuthorizedParty: "acme-registered-app"},
+			name:      "basic",
+			principal: auth.Principal{Subject: "subject-id"},
+			issueParams: auth.JWTIssueParams{
+				AuthorizedParty: "acme-registered-app",
+				Issuer:          "https://acme-auth-server.com",
+				Exp:             30 * time.Second,
+			},
 			checks: []ClaimCheckFunction{
 				CheckClaimStringValue("sub", "subject-id"),
 				CheckClaimStringValue("iss", "https://acme-auth-server.com"),
@@ -81,10 +83,12 @@ func TestJWTIssuer_BaseClaims(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name:        "no scheme.Exp",
-			principal:   auth.Principal{Subject: "subject-id"},
-			scheme:      auth.JWTIssueScheme{Issuer: "https://acme-auth-server.com"},
-			issueParams: auth.JWTIssueParams{AuthorizedParty: "acme-registered-app"},
+			name:      "no scheme.Exp",
+			principal: auth.Principal{Subject: "subject-id"},
+			issueParams: auth.JWTIssueParams{
+				Issuer:          "https://acme-auth-server.com",
+				AuthorizedParty: "acme-registered-app",
+			},
 			checks: []ClaimCheckFunction{
 				CheckClaimStringValue("sub", "subject-id"),
 				CheckClaimStringValue("iss", "https://acme-auth-server.com"),
@@ -97,8 +101,7 @@ func TestJWTIssuer_BaseClaims(t *testing.T) {
 		{
 			name:        "no azp",
 			principal:   auth.Principal{Subject: "subject-id"},
-			scheme:      auth.JWTIssueScheme{Issuer: "https://acme-auth-server.com", Exp: 30 * time.Second},
-			issueParams: auth.JWTIssueParams{},
+			issueParams: auth.JWTIssueParams{Issuer: "https://acme-auth-server.com", Exp: 30 * time.Second},
 			checks: []ClaimCheckFunction{
 				CheckClaimStringValue("sub", "subject-id"),
 				CheckClaimStringValue("iss", "https://acme-auth-server.com"),
@@ -112,7 +115,7 @@ func TestJWTIssuer_BaseClaims(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var iss auth.JWTIssuer
-			got, gotErr := iss.BaseClaims(context.Background(), tt.principal, tt.scheme, tt.issueParams)
+			got, gotErr := iss.BaseClaims(context.Background(), tt.principal, tt.issueParams)
 			if gotErr != nil {
 				if !tt.wantErr {
 					t.Errorf("BaseClaims() failed: %v", gotErr)
@@ -221,17 +224,17 @@ func TestJWTIssuer_Sign(t *testing.T) {
 	tests := []struct {
 		name string // description of this test case
 		// Named input parameters for target function.
-		payload map[string]any
-		scheme  auth.JWTIssueScheme
-		want    []byte
-		wantErr bool
+		payload     map[string]any
+		issueParams auth.JWTIssueParams
+		want        []byte
+		wantErr     bool
 	}{
 		{
 			name: "basic RS256",
 			payload: map[string]any{
 				"sub": "subject-id",
 			},
-			scheme: auth.JWTIssueScheme{
+			issueParams: auth.JWTIssueParams{
 				Issuer: "acme-issuer",
 				Exp:    20 * time.Second,
 				Key: auth.JWTIssueSchemeKey{
@@ -245,7 +248,7 @@ func TestJWTIssuer_Sign(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var iss auth.JWTIssuer
-			_, gotErr := iss.Sign(tt.payload, tt.scheme)
+			_, gotErr := iss.Sign(tt.payload, tt.issueParams)
 			if gotErr != nil {
 				if !tt.wantErr {
 					t.Errorf("Sign() failed: %v", gotErr)
@@ -263,10 +266,8 @@ func TestJWTIssuer_Issue(t *testing.T) {
 	rsaKey, _ := rsa.GenerateKey(rand.Reader, 2048)
 
 	tests := []struct {
-		name string // description of this test case
-		// Named input parameters for target function.
+		name        string
 		principal   auth.Principal
-		scheme      auth.IssueScheme
 		issueParams auth.IssueParams
 		wantErr     bool
 	}{
@@ -275,7 +276,7 @@ func TestJWTIssuer_Issue(t *testing.T) {
 			principal: auth.Principal{
 				Subject: "subject-id",
 			},
-			scheme: auth.JWTIssueScheme{
+			issueParams: auth.JWTIssueParams{
 				Issuer: "acme-issuer",
 				Exp:    20 * time.Second,
 				Key: auth.JWTIssueSchemeKey{
@@ -283,15 +284,14 @@ func TestJWTIssuer_Issue(t *testing.T) {
 					Alg:        "RS256",
 				},
 			},
-			issueParams: auth.JWTIssueParams{},
-			wantErr:     false,
+			wantErr: false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// TODO: construct the receiver type.
 			var iss auth.JWTIssuer
-			_, gotErr := iss.Issue(context.Background(), tt.principal, tt.scheme, tt.issueParams)
+			_, gotErr := iss.Issue(context.Background(), tt.principal, tt.issueParams)
 			if gotErr != nil {
 				if !tt.wantErr {
 					t.Errorf("Issue() failed: %v", gotErr)

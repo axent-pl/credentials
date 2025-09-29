@@ -12,23 +12,18 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
-// -- issue scheme
-type JWTIssueScheme struct {
-	Issuer string
-	Exp    time.Duration
-	Key    JWTIssueSchemeKey
-}
-
 type JWTIssueSchemeKey struct {
 	Kid        string
 	Alg        string
 	PrivateKey crypto.PrivateKey
 }
 
-func (JWTIssueScheme) Kind() Kind { return CredJWT }
-
 // -- issue params
 type JWTIssueParams struct {
+	Issuer string
+	Exp    time.Duration
+	Key    JWTIssueSchemeKey
+
 	AuthorizedParty SubjectID
 
 	AccessIncludedClaims  []string
@@ -47,19 +42,14 @@ type JWTIssuer struct {
 
 func (JWTIssuer) Kind() Kind { return CredJWT }
 
-func (iss *JWTIssuer) Issue(ctx context.Context, principal Principal, scheme IssueScheme, issueParams IssueParams) ([]Artifact, error) {
-	jwtIssueScheme, ok := scheme.(JWTIssueScheme)
-	if !ok {
-		logx.L().Debug("could not cast IssueScheme to JWTIssueScheme", "context", ctx)
-		return nil, ErrInternal
-	}
+func (iss *JWTIssuer) Issue(ctx context.Context, principal Principal, issueParams IssueParams) ([]Artifact, error) {
 	jwtIssueParams, ok := issueParams.(JWTIssueParams)
 	if !ok {
 		logx.L().Debug("could not cast IssueParams to JWTIssueParams", "context", ctx)
 		return nil, ErrInternal
 	}
 
-	baseClaims, err := iss.BaseClaims(ctx, principal, jwtIssueScheme, jwtIssueParams)
+	baseClaims, err := iss.BaseClaims(ctx, principal, jwtIssueParams)
 	if err != nil {
 		logx.L().Debug("could not build base claims", "context", ctx, "error", err)
 		return nil, ErrInternal
@@ -73,7 +63,7 @@ func (iss *JWTIssuer) Issue(ctx context.Context, principal Principal, scheme Iss
 		logx.L().Debug("could not build access token claims", "context", ctx, "error", err)
 		return nil, ErrInternal
 	}
-	accessTokenBytes, err := iss.Sign(accessClaims, jwtIssueScheme)
+	accessTokenBytes, err := iss.Sign(accessClaims, jwtIssueParams)
 	if err != nil {
 		logx.L().Debug("could not sign access token", "context", ctx, "error", err)
 		return nil, ErrInternal
@@ -90,7 +80,7 @@ func (iss *JWTIssuer) Issue(ctx context.Context, principal Principal, scheme Iss
 		logx.L().Debug("could not build id token claims", "context", ctx, "error", err)
 		return nil, ErrInternal
 	}
-	idTokenBytes, err := iss.Sign(idClaims, jwtIssueScheme)
+	idTokenBytes, err := iss.Sign(idClaims, jwtIssueParams)
 	if err != nil {
 		logx.L().Debug("could not sign id token", "context", ctx, "error", err)
 		return nil, ErrInternal
@@ -107,7 +97,7 @@ func (iss *JWTIssuer) Issue(ctx context.Context, principal Principal, scheme Iss
 		logx.L().Debug("could not build refresh token claims", "context", ctx, "error", err)
 		return nil, ErrInternal
 	}
-	refreshTokenBytes, err := iss.Sign(refreshClaims, jwtIssueScheme)
+	refreshTokenBytes, err := iss.Sign(refreshClaims, jwtIssueParams)
 	if err != nil {
 		logx.L().Debug("could not sign refresh token", "context", ctx, "error", err)
 		return nil, ErrInternal
@@ -121,7 +111,7 @@ func (iss *JWTIssuer) Issue(ctx context.Context, principal Principal, scheme Iss
 	// oauth2 token response
 	tokenResponse := map[string]any{
 		"token_type":    "Bearer",
-		"expires_in":    jwtIssueScheme.Exp.Seconds(),
+		"expires_in":    jwtIssueParams.Exp.Seconds(),
 		"access_token":  string(accessTokenBytes),
 		"id_token":      string(idTokenBytes),
 		"refresh_token": string(refreshTokenBytes),
@@ -140,21 +130,21 @@ func (iss *JWTIssuer) Issue(ctx context.Context, principal Principal, scheme Iss
 	return artifacts, nil
 }
 
-func (iss *JWTIssuer) Sign(payload map[string]any, scheme JWTIssueScheme) ([]byte, error) {
+func (iss *JWTIssuer) Sign(payload map[string]any, params JWTIssueParams) ([]byte, error) {
 	claims := jwt.MapClaims{}
 	maps.Copy(claims, payload)
 
-	signingMethod, err := algToJWTSigningMethod(scheme.Key.Alg)
+	signingMethod, err := algToJWTSigningMethod(params.Key.Alg)
 	if err != nil {
 		return nil, fmt.Errorf("could not sign payload: %w", err)
 	}
 
 	token := jwt.NewWithClaims(signingMethod, claims)
-	if scheme.Key.Kid != "" {
-		token.Header["kid"] = scheme.Key.Kid
+	if params.Key.Kid != "" {
+		token.Header["kid"] = params.Key.Kid
 	}
 
-	tokenString, err := token.SignedString(scheme.Key.PrivateKey)
+	tokenString, err := token.SignedString(params.Key.PrivateKey)
 	if err != nil {
 		return nil, fmt.Errorf("could not sign payload: %w", err)
 	}
@@ -186,11 +176,11 @@ func (iss *JWTIssuer) PatchedClaims(ctx context.Context, principal Principal, ba
 	return out, nil
 }
 
-func (iss *JWTIssuer) BaseClaims(ctx context.Context, principal Principal, scheme JWTIssueScheme, issueParams JWTIssueParams) (map[string]any, error) {
+func (iss *JWTIssuer) BaseClaims(ctx context.Context, principal Principal, issueParams JWTIssueParams) (map[string]any, error) {
 	claims := make(map[string]any)
 	claims["sub"] = string(principal.Subject)
-	claims["iss"] = scheme.Issuer
-	claims["exp"] = time.Now().Add(scheme.Exp).Unix()
+	claims["iss"] = issueParams.Issuer
+	claims["exp"] = time.Now().Add(issueParams.Exp).Unix()
 	claims["iat"] = time.Now().Unix()
 	if issueParams.AuthorizedParty != "" {
 		claims["azp"] = string(issueParams.AuthorizedParty)
