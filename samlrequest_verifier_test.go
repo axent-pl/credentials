@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/axent-pl/auth"
+	"github.com/axent-pl/auth/sig"
 )
 
 func TestSAMLRequestVerifier_Verify(t *testing.T) {
@@ -49,7 +50,7 @@ func TestSAMLRequestVerifier_Verify(t *testing.T) {
 					Keys: []auth.SAMLRequestSchemeKey{
 						{
 							Key:    rsaKey.PublicKey,
-							SigAlg: "http://www.w3.org/2001/04/xmldsig-more#rsa-sha256",
+							SigAlg: sig.SigAlgRS256,
 						},
 					},
 				},

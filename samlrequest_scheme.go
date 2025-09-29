@@ -1,6 +1,10 @@
 package auth
 
-import "crypto"
+import (
+	"crypto"
+
+	"github.com/axent-pl/auth/sig"
+)
 
 type SAMLRequestScheme struct {
 	Keys []SAMLRequestSchemeKey
@@ -8,7 +12,7 @@ type SAMLRequestScheme struct {
 
 type SAMLRequestSchemeKey struct {
 	Key    crypto.PublicKey
-	SigAlg string
+	SigAlg sig.SigAlg
 }
 
 func (SAMLRequestScheme) Kind() Kind { return CredSAMLRequest }

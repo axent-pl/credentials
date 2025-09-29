@@ -5,7 +5,6 @@ import (
 	"crypto/ecdsa"
 	"crypto/rsa"
 	"fmt"
-	"strings"
 
 	"github.com/golang-jwt/jwt/v5"
 )
@@ -71,8 +70,6 @@ func (sa SigAlg) ToGoJWT() (jwt.SigningMethod, error) {
 	return nil, fmt.Errorf("unknown alg: %s", sa)
 }
 
-// ---------- OAuth2 / JWT <-> SigAlg ----------
-
 func FromOAuth(s string) (SigAlg, error) {
 	mapping := map[string]SigAlg{
 		"RS1":   SigAlgRS1,
@@ -111,65 +108,55 @@ func (sa SigAlg) ToOAuth() (string, error) {
 	return "unknown", fmt.Errorf("unknown alg: %s", sa)
 }
 
-// ---------- SAML XMLDSIG URI <-> Alg ----------
-
-const (
-	// RSA PKCS#1 v1.5
-	samlRSA1   = "http://www.w3.org/2000/09/xmldsig#rsa-sha1"
-	samlRSA256 = "http://www.w3.org/2001/04/xmldsig-more#rsa-sha256"
-	samlRSA384 = "http://www.w3.org/2001/04/xmldsig-more#rsa-sha384"
-	samlRSA512 = "http://www.w3.org/2001/04/xmldsig-more#rsa-sha512"
-
-	// ECDSA
-	samlECDSA256 = "http://www.w3.org/2001/04/xmldsig-more#ecdsa-sha256"
-	samlECDSA384 = "http://www.w3.org/2001/04/xmldsig-more#ecdsa-sha384"
-	samlECDSA512 = "http://www.w3.org/2001/04/xmldsig-more#ecdsa-sha512"
-
-	// NOTE: XMLDSIG-More also defines RSA-PSS URIs, e.g.
-	//   "http://www.w3.org/2007/05/xmldsig-more#sha256-rsa-MGF1"
-	// If you need them, add mappings similarly to PS*.
-)
-
-func FromSAML(uri string) (SigAlg, error) {
-	switch strings.TrimSpace(uri) {
-	case samlRSA1:
-		return SigAlgRS1, nil
-	case samlRSA256:
-		return SigAlgRS256, nil
-	case samlRSA384:
-		return SigAlgRS384, nil
-	case samlRSA512:
-		return SigAlgRS512, nil
-	case samlECDSA256:
-		return SigAlgES256, nil
-	case samlECDSA384:
-		return SigAlgES384, nil
-	case samlECDSA512:
-		return SigAlgES512, nil
-	default:
-		return SigAlgUnknown, fmt.Errorf("unknown or unsupported SAML XMLDSIG URI %q", uri)
+func FromSAML(s string) (SigAlg, error) {
+	mapping := map[string]SigAlg{
+		"http://www.w3.org/2000/09/xmldsig#rsa-sha1":          SigAlgRS1,
+		"http://www.w3.org/2001/04/xmldsig-more#rsa-sha256":   SigAlgRS256,
+		"http://www.w3.org/2001/04/xmldsig-more#rsa-sha384":   SigAlgRS384,
+		"http://www.w3.org/2001/04/xmldsig-more#rsa-sha512":   SigAlgRS512,
+		"http://www.w3.org/2001/04/xmldsig-more#ecdsa-sha256": SigAlgES256,
+		"http://www.w3.org/2001/04/xmldsig-more#ecdsa-sha384": SigAlgES384,
+		"http://www.w3.org/2001/04/xmldsig-more#ecdsa-sha512": SigAlgES512,
 	}
+	if alg, ok := mapping[s]; ok {
+		return alg, nil
+	}
+	return SigAlgUnknown, fmt.Errorf("unknown alg: %s", s)
 }
 
 func (sa SigAlg) ToSAML() (string, error) {
-	switch sa {
-	case SigAlgRS1:
-		return samlRSA1, nil
-	case SigAlgRS256:
-		return samlRSA256, nil
-	case SigAlgRS384:
-		return samlRSA384, nil
-	case SigAlgRS512:
-		return samlRSA512, nil
-	case SigAlgES256:
-		return samlECDSA256, nil
-	case SigAlgES384:
-		return samlECDSA384, nil
-	case SigAlgES512:
-		return samlECDSA512, nil
-	default:
-		return "", fmt.Errorf("no SAML XMLDSIG mapping for %v", sa)
+	mapping := map[SigAlg]string{
+		SigAlgRS1:   "http://www.w3.org/2000/09/xmldsig#rsa-sha1",
+		SigAlgRS256: "http://www.w3.org/2001/04/xmldsig-more#rsa-sha256",
+		SigAlgRS384: "http://www.w3.org/2001/04/xmldsig-more#rsa-sha384",
+		SigAlgRS512: "http://www.w3.org/2001/04/xmldsig-more#rsa-sha512",
+		SigAlgES256: "http://www.w3.org/2001/04/xmldsig-more#ecdsa-sha256",
+		SigAlgES384: "http://www.w3.org/2001/04/xmldsig-more#ecdsa-sha384",
+		SigAlgES512: "http://www.w3.org/2001/04/xmldsig-more#ecdsa-sha512",
 	}
+	if alg, ok := mapping[sa]; ok {
+		return alg, nil
+	}
+	return "unknown", fmt.Errorf("unknown alg: %s", sa)
+}
+
+func (sa SigAlg) ToCryptoHash() (*crypto.Hash, error) {
+	mapping := map[SigAlg]crypto.Hash{
+		SigAlgRS1:   crypto.SHA1,
+		SigAlgRS256: crypto.SHA256,
+		SigAlgRS384: crypto.SHA384,
+		SigAlgRS512: crypto.SHA512,
+		SigAlgES256: crypto.SHA256,
+		SigAlgES384: crypto.SHA384,
+		SigAlgES512: crypto.SHA512,
+		SigAlgPS256: crypto.SHA256,
+		SigAlgPS384: crypto.SHA384,
+		SigAlgPS512: crypto.SHA512,
+	}
+	if alg, ok := mapping[sa]; ok {
+		return &alg, nil
+	}
+	return nil, fmt.Errorf("unknown alg: %s", sa)
 }
 
 // ---------- crypto.Hash + key type <-> Alg ----------

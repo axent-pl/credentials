@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/axent-pl/auth/logx"
+	"github.com/axent-pl/auth/sig"
 )
 
 type SAMLRequestIssueKey struct {
@@ -121,7 +122,7 @@ func (iss *SAMLRequestIssuer) Issue(ctx context.Context, _ Principal, issueParam
 func (iss *SAMLRequestIssuer) Sign(r SAMLRequestInput, key *SAMLRequestIssueKey) (string, error) {
 	_, _ = SAMLSigAlg(key.PrivateKey, key.HashAlg)
 	signedData := r.SignedQuery()
-	digest, _ := hashSAMLSignedData(signedData, key.HashAlg)
+	digest, _ := sig.Hash(signedData, key.HashAlg)
 
 	var opts crypto.SignerOpts
 	switch key.PrivateKey.(type) {
