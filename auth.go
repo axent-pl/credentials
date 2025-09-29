@@ -43,10 +43,6 @@ type Verifier interface {
 }
 
 // -- issue --
-type IssueScheme interface {
-	Kind() Kind
-}
-
 type IssueParams interface {
 	Kind() Kind
 }
@@ -72,5 +68,5 @@ type Artifact struct {
 
 type Issuer interface {
 	Kind() Kind
-	Issue(ctx context.Context, principal Principal, scheme IssueScheme, issueParams IssueParams) ([]Artifact, error)
+	Issue(ctx context.Context, principal Principal, issueParams IssueParams) ([]Artifact, error)
 }

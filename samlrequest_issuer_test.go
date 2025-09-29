@@ -17,9 +17,7 @@ func TestSAMLRequestIssuer_Issue(t *testing.T) {
 	ecdsaKey, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 
 	tests := []struct {
-		name string // description of this test case
-		// Named input parameters for target function.
-		scheme      auth.IssueScheme
+		name        string
 		issueParams auth.IssueParams
 		want        []auth.Artifact
 		wantErr     bool
