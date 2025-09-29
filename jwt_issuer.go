@@ -12,7 +12,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
-type JWTIssueSchemeKey struct {
+type JWTIssueKey struct {
 	Kid        string
 	Alg        string
 	PrivateKey crypto.PrivateKey
@@ -22,7 +22,7 @@ type JWTIssueSchemeKey struct {
 type JWTIssueParams struct {
 	Issuer string
 	Exp    time.Duration
-	Key    JWTIssueSchemeKey
+	Key    JWTIssueKey
 
 	AuthorizedParty SubjectID
 

@@ -16,13 +16,12 @@ func TestSAMLRequestVerifier_Verify(t *testing.T) {
 	// ecdsaKey, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 
 	issuer := auth.SAMLRequestIssuer{}
-	artifacts, _ := issuer.Issue(context.Background(), auth.Principal{}, auth.SAMLRequestIssueScheme{
+	artifacts, _ := issuer.Issue(context.Background(), auth.Principal{}, auth.SAMLRequestIssueParams{
 		Issuer: "https://saml.application.org",
 		Key: &auth.SAMLRequestIssueSchemeKey{
 			PrivateKey: rsaKey,
 			HashAlg:    crypto.SHA256,
 		},
-	}, auth.SAMLRequestIssueParams{
 		Destination: "https://saml.idp.org",
 	})
 	samlRequestURI, _ := auth.ArtifactWithKind(artifacts, auth.ArtifactSAMLRequestURI)

@@ -237,7 +237,7 @@ func TestJWTIssuer_Sign(t *testing.T) {
 			issueParams: auth.JWTIssueParams{
 				Issuer: "acme-issuer",
 				Exp:    20 * time.Second,
-				Key: auth.JWTIssueSchemeKey{
+				Key: auth.JWTIssueKey{
 					PrivateKey: rsaKey,
 					Alg:        "RS256",
 				},
@@ -279,7 +279,7 @@ func TestJWTIssuer_Issue(t *testing.T) {
 			issueParams: auth.JWTIssueParams{
 				Issuer: "acme-issuer",
 				Exp:    20 * time.Second,
-				Key: auth.JWTIssueSchemeKey{
+				Key: auth.JWTIssueKey{
 					PrivateKey: rsaKey,
 					Alg:        "RS256",
 				},

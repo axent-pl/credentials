@@ -15,7 +15,7 @@ func TestJWTVerifier_Verify(t *testing.T) {
 	issueParams := auth.JWTIssueParams{
 		Issuer: "acme-issuer",
 		Exp:    20 * time.Second,
-		Key: auth.JWTIssueSchemeKey{
+		Key: auth.JWTIssueKey{
 			PrivateKey: rsaKey,
 			Alg:        "RS256",
 		},

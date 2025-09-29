@@ -26,38 +26,32 @@ func TestSAMLRequestIssuer_Issue(t *testing.T) {
 	}{
 		{
 			name: "basic without signature success",
-			scheme: auth.SAMLRequestIssueScheme{
-				Issuer: "https://saml.application.org",
-			},
 			issueParams: auth.SAMLRequestIssueParams{
+				Issuer:      "https://saml.application.org",
 				Destination: "https://saml.idp.org",
 			},
 			wantErr: false,
 		},
 		{
 			name: "basic with signature (rsa+sha256) success",
-			scheme: auth.SAMLRequestIssueScheme{
+			issueParams: auth.SAMLRequestIssueParams{
 				Issuer: "https://saml.application.org",
 				Key: &auth.SAMLRequestIssueSchemeKey{
 					PrivateKey: rsaKey,
 					HashAlg:    crypto.SHA256,
 				},
-			},
-			issueParams: auth.SAMLRequestIssueParams{
 				Destination: "https://saml.idp.org",
 			},
 			wantErr: false,
 		},
 		{
 			name: "basic with signature (ecdsa+sha256) success",
-			scheme: auth.SAMLRequestIssueScheme{
+			issueParams: auth.SAMLRequestIssueParams{
 				Issuer: "https://saml.application.org",
 				Key: &auth.SAMLRequestIssueSchemeKey{
 					PrivateKey: ecdsaKey,
 					HashAlg:    crypto.SHA256,
 				},
-			},
-			issueParams: auth.SAMLRequestIssueParams{
 				Destination: "https://saml.idp.org",
 			},
 			wantErr: false,
@@ -67,7 +61,7 @@ func TestSAMLRequestIssuer_Issue(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// TODO: construct the receiver type.
 			var iss auth.SAMLRequestIssuer
-			_, gotErr := iss.Issue(context.Background(), auth.Principal{}, tt.scheme, tt.issueParams)
+			_, gotErr := iss.Issue(context.Background(), auth.Principal{}, tt.issueParams)
 			if gotErr != nil {
 				if !tt.wantErr {
 					t.Errorf("Issue() failed: %v", gotErr)

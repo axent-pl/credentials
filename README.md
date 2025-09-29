@@ -3,16 +3,17 @@
 ### JWT Issue
 ```golang
 signatureKey, _ := rsa.GenerateKey(rand.Reader, 2048)
-issueScheme := JWTIssueScheme{
+issueParams := JWTIssueParams{
     Issuer: "acme-issuer",
     Exp:    20 * time.Second,
-    Key: JWTIssueSchemeKey{
+    Key: JWTIssueKey{
         PrivateKey: signatureKey,
         Alg:        "RS256",
     },
 }
 issuer := JWTIssuer{}
-artifacts, _ := issuer.Issue(context.Background(), Principal{Subject: "subject-id"}, issueScheme, JWTIssueParams{})
+// Issues JWT token for principal
+artifacts, _ := issuer.Issue(context.Background(), Principal{Subject: "subject-id"}, issueParams)
 accessToken, _ := ArtifactWithKind(artifacts, ArtifactAccessToken)
 ```
 

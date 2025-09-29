@@ -15,20 +15,17 @@ import (
 	"github.com/axent-pl/auth/logx"
 )
 
-type SAMLRequestIssueScheme struct {
-	// The actual entityID string (usually a URI) identifying the Service Provider.
-	Issuer string
-	Key    *SAMLRequestIssueSchemeKey
-}
-
-func (SAMLRequestIssueScheme) Kind() Kind { return CredSAMLRequest }
-
 type SAMLRequestIssueSchemeKey struct {
 	HashAlg    crypto.Hash
 	PrivateKey crypto.PrivateKey
 }
 
 type SAMLRequestIssueParams struct {
+	// The actual entityID string (usually a URI) identifying the Service Provider.
+	Issuer string
+
+	Key *SAMLRequestIssueSchemeKey
+
 	// RelayState: Optional (but commonly used).
 	// An opaque value sent by the Service Provider (SP) and returned unchanged
 	// by the Identity Provider (IdP). Typically used for preserving state (e.g. return URL).
@@ -58,12 +55,7 @@ type SAMLRequestIssuer struct {
 
 func (SAMLRequestIssuer) Kind() Kind { return CredSAMLRequest }
 
-func (iss *SAMLRequestIssuer) Issue(ctx context.Context, _ Principal, scheme IssueScheme, issueParams IssueParams) ([]Artifact, error) {
-	samlIssueScheme, ok := scheme.(SAMLRequestIssueScheme)
-	if !ok {
-		logx.L().Debug("could not cast IssueScheme to SAMLRequestIssueScheme", "context", ctx)
-		return nil, ErrInternal
-	}
+func (iss *SAMLRequestIssuer) Issue(ctx context.Context, _ Principal, issueParams IssueParams) ([]Artifact, error) {
 	samlIssueParams, ok := issueParams.(SAMLRequestIssueParams)
 	if !ok {
 		logx.L().Debug("could not cast IssueParams to SAMLRequestIssueParams", "context", ctx)
@@ -82,7 +74,7 @@ func (iss *SAMLRequestIssuer) Issue(ctx context.Context, _ Principal, scheme Iss
 		ForceAuthn:                  samlIssueParams.ForceAuthn,
 		IsPassive:                   samlIssueParams.IsPassive,
 		Issuer: &SAMLRequestIssuerXML{
-			Value: samlIssueScheme.Issuer,
+			Value: samlIssueParams.Issuer,
 		},
 	}
 	// marshal SAMLRequestXML
@@ -91,16 +83,16 @@ func (iss *SAMLRequestIssuer) Issue(ctx context.Context, _ Principal, scheme Iss
 		return nil, ErrInternal
 	}
 	// sign if signature key provided in scheme
-	if samlIssueScheme.Key != nil {
+	if samlIssueParams.Key != nil {
 		// determine SigAlg
-		sigAlg, err := SAMLSigAlg(samlIssueScheme.Key.PrivateKey, samlIssueScheme.Key.HashAlg)
+		sigAlg, err := SAMLSigAlg(samlIssueParams.Key.PrivateKey, samlIssueParams.Key.HashAlg)
 		if err != nil {
 			logx.L().Error("could not determine SAMLRequest SigAlg", "context", ctx, "error", err)
 			return nil, ErrInternal
 		}
 		// sign
 		samlRequest.SigAlg = sigAlg
-		signature, err := iss.Sign(samlRequest, samlIssueScheme.Key)
+		signature, err := iss.Sign(samlRequest, samlIssueParams.Key)
 		if err != nil {
 			logx.L().Error("could not sign SAMLRequest", "context", ctx, "error", err)
 			return nil, ErrInternal
