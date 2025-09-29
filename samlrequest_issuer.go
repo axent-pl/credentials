@@ -15,7 +15,7 @@ import (
 	"github.com/axent-pl/auth/logx"
 )
 
-type SAMLRequestIssueSchemeKey struct {
+type SAMLRequestIssueKey struct {
 	HashAlg    crypto.Hash
 	PrivateKey crypto.PrivateKey
 }
@@ -24,7 +24,7 @@ type SAMLRequestIssueParams struct {
 	// The actual entityID string (usually a URI) identifying the Service Provider.
 	Issuer string
 
-	Key *SAMLRequestIssueSchemeKey
+	Key *SAMLRequestIssueKey
 
 	// RelayState: Optional (but commonly used).
 	// An opaque value sent by the Service Provider (SP) and returned unchanged
@@ -118,7 +118,7 @@ func (iss *SAMLRequestIssuer) Issue(ctx context.Context, _ Principal, issueParam
 	return artifacts, nil
 }
 
-func (iss *SAMLRequestIssuer) Sign(r SAMLRequestInput, key *SAMLRequestIssueSchemeKey) (string, error) {
+func (iss *SAMLRequestIssuer) Sign(r SAMLRequestInput, key *SAMLRequestIssueKey) (string, error) {
 	_, _ = SAMLSigAlg(key.PrivateKey, key.HashAlg)
 	signedData := r.SignedQuery()
 	digest, _ := hashSAMLSignedData(signedData, key.HashAlg)

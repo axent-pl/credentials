@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/axent-pl/auth"
+	"github.com/axent-pl/auth/sig"
 )
 
 type ClaimCheckFunction func(got map[string]any) error
@@ -239,7 +240,7 @@ func TestJWTIssuer_Sign(t *testing.T) {
 				Exp:    20 * time.Second,
 				Key: auth.JWTIssueKey{
 					PrivateKey: rsaKey,
-					Alg:        "RS256",
+					Alg:        sig.SigAlgRS256,
 				},
 			},
 			wantErr: false,
@@ -281,7 +282,7 @@ func TestJWTIssuer_Issue(t *testing.T) {
 				Exp:    20 * time.Second,
 				Key: auth.JWTIssueKey{
 					PrivateKey: rsaKey,
-					Alg:        "RS256",
+					Alg:        sig.SigAlgRS256,
 				},
 			},
 			wantErr: false,

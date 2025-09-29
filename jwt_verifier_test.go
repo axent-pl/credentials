@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/axent-pl/auth"
+	"github.com/axent-pl/auth/sig"
 )
 
 func TestJWTVerifier_Verify(t *testing.T) {
@@ -17,7 +18,7 @@ func TestJWTVerifier_Verify(t *testing.T) {
 		Exp:    20 * time.Second,
 		Key: auth.JWTIssueKey{
 			PrivateKey: rsaKey,
-			Alg:        "RS256",
+			Alg:        sig.SigAlgRS256,
 		},
 	}
 	var issuer auth.JWTIssuer

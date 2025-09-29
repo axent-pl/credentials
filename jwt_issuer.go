@@ -9,12 +9,13 @@ import (
 	"time"
 
 	"github.com/axent-pl/auth/logx"
+	"github.com/axent-pl/auth/sig"
 	"github.com/golang-jwt/jwt/v5"
 )
 
 type JWTIssueKey struct {
 	Kid        string
-	Alg        string
+	Alg        sig.SigAlg
 	PrivateKey crypto.PrivateKey
 }
 
@@ -134,7 +135,7 @@ func (iss *JWTIssuer) Sign(payload map[string]any, params JWTIssueParams) ([]byt
 	claims := jwt.MapClaims{}
 	maps.Copy(claims, payload)
 
-	signingMethod, err := algToJWTSigningMethod(params.Key.Alg)
+	signingMethod, err := params.Key.Alg.ToGoJWT()
 	if err != nil {
 		return nil, fmt.Errorf("could not sign payload: %w", err)
 	}
@@ -186,23 +187,4 @@ func (iss *JWTIssuer) BaseClaims(ctx context.Context, principal Principal, issue
 		claims["azp"] = string(issueParams.AuthorizedParty)
 	}
 	return claims, nil
-}
-
-func algToJWTSigningMethod(method string) (jwt.SigningMethod, error) {
-	mapping := map[string]jwt.SigningMethod{
-		"RS256": jwt.SigningMethodRS256,
-		"RS384": jwt.SigningMethodRS384,
-		"RS512": jwt.SigningMethodRS512,
-		"ES256": jwt.SigningMethodES256,
-		"ES384": jwt.SigningMethodES384,
-		"ES512": jwt.SigningMethodES512,
-		"PS256": jwt.SigningMethodPS256,
-		"PS384": jwt.SigningMethodPS384,
-		"PS512": jwt.SigningMethodPS512,
-	}
-
-	if alg, ok := mapping[method]; ok {
-		return alg, nil
-	}
-	return nil, fmt.Errorf("invalid alg: %s", method)
 }

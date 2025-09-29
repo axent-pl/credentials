@@ -14,6 +14,8 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+
+	"github.com/axent-pl/auth/sig"
 )
 
 type JWKSProvider struct {
@@ -140,10 +142,12 @@ func (p *JWKSProvider) ValidationSchemes(ctx context.Context, in Credentials) ([
 		if jk.Kid == "" {
 			allHaveKID = false
 		}
+		alg, _ := sig.FromOAuth(jk.Alg)
+
 		keys = append(keys, JWTSchemeKey{
 			ID:  jk.Kid,
 			Key: pub,
-			Alg: jk.Alg,
+			Alg: alg,
 		})
 	}
 

@@ -34,7 +34,7 @@ func TestSAMLRequestIssuer_Issue(t *testing.T) {
 			name: "basic with signature (rsa+sha256) success",
 			issueParams: auth.SAMLRequestIssueParams{
 				Issuer: "https://saml.application.org",
-				Key: &auth.SAMLRequestIssueSchemeKey{
+				Key: &auth.SAMLRequestIssueKey{
 					PrivateKey: rsaKey,
 					HashAlg:    crypto.SHA256,
 				},
@@ -46,7 +46,7 @@ func TestSAMLRequestIssuer_Issue(t *testing.T) {
 			name: "basic with signature (ecdsa+sha256) success",
 			issueParams: auth.SAMLRequestIssueParams{
 				Issuer: "https://saml.application.org",
-				Key: &auth.SAMLRequestIssueSchemeKey{
+				Key: &auth.SAMLRequestIssueKey{
 					PrivateKey: ecdsaKey,
 					HashAlg:    crypto.SHA256,
 				},

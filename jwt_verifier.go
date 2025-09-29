@@ -47,7 +47,7 @@ func (v *JWTVerifier) Verify(ctx context.Context, in Credentials, schemes []Sche
 			if conf.MustMatchKid && headerKid != keyConfig.ID {
 				continue
 			}
-			if keyConfig.Alg != "" && keyConfig.Alg != headerAlg {
+			if alg, err := keyConfig.Alg.ToOAuth(); err == nil && alg != headerAlg {
 				continue
 			}
 			opts := v.buildParserOptions(conf, keyConfig)
@@ -80,8 +80,8 @@ func (v *JWTVerifier) buildParserOptions(scheme JWTScheme, keyConf JWTSchemeKey)
 	if scheme.Audience != "" {
 		opts = append(opts, jwt.WithAudience(scheme.Audience))
 	}
-	if keyConf.Alg != "" {
-		opts = append(opts, jwt.WithValidMethods([]string{keyConf.Alg}))
+	if alg, err := keyConf.Alg.ToOAuth(); err == nil {
+		opts = append(opts, jwt.WithValidMethods([]string{alg}))
 	}
 	return opts
 }

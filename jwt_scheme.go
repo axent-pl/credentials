@@ -3,6 +3,8 @@ package auth
 import (
 	"crypto"
 	"time"
+
+	"github.com/axent-pl/auth/sig"
 )
 
 type JWTScheme struct {
@@ -21,14 +23,9 @@ type JWTScheme struct {
 }
 
 type JWTSchemeKey struct {
-	// "kid"
 	ID  string
 	Key crypto.PublicKey
-	// Allowed value of the "alg"
-	// E.g. "RS256", "RS384", "RS512",
-	// "ES256", "ES384", "ES512",
-	// "PS256", "PS384", "PS512"
-	Alg string
+	Alg sig.SigAlg
 }
 
 func (JWTScheme) Kind() Kind { return CredJWT }
