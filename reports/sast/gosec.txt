@@ -1,24 +1,10 @@
 Results:
 
 
-[/workspace/samlrequest_verifier.go:155] - G401 (CWE-328): Use of weak cryptographic primitive (Confidence: HIGH, Severity: MEDIUM)
-    154: 	case crypto.SHA1:
-  > 155: 		sum := sha1.Sum(signedData)
-    156: 		digest = sum[:]
-
-Autofix: 
-
-[/workspace/samlrequest_verifier.go:8] - G505 (CWE-327): Blocklisted import crypto/sha1: weak cryptographic primitive (Confidence: HIGH, Severity: MEDIUM)
-    7: 	"crypto/rsa"
-  > 8: 	"crypto/sha1"
-    9: 	"crypto/sha256"
-
-Autofix: 
-
 Summary:
   Gosec  : dev
-  Files  : 19
-  Lines  : 2206
+  Files  : 22
+  Lines  : 2444
   Nosec  : 1
-  Issues : 2
+  Issues : 0
 

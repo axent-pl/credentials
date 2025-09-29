@@ -8,12 +8,10 @@ issueParams := JWTIssueParams{
     Exp:    20 * time.Second,
     Key: JWTIssueKey{
         PrivateKey: signatureKey,
-        Alg:        "RS256",
+        Alg:        sig.SigAlgRS256,
     },
 }
-issuer := JWTIssuer{}
-// Issues JWT token for principal
-artifacts, _ := issuer.Issue(context.Background(), Principal{Subject: "subject-id"}, issueParams)
+artifacts, _ := (JWTIssuer{}).Issue(context.Background(), Principal{Subject: "subject-id"}, issueParams)
 accessToken, _ := ArtifactWithKind(artifacts, ArtifactAccessToken)
 ```
 

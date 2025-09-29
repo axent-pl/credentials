@@ -2,6 +2,8 @@ package auth_test
 
 import (
 	"context"
+	"crypto/ecdsa"
+	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/rsa"
 	"fmt"
@@ -220,7 +222,9 @@ func TestJWTIssuer_PatchedClaims(t *testing.T) {
 }
 
 func TestJWTIssuer_Sign(t *testing.T) {
-	rsaKey, _ := rsa.GenerateKey(rand.Reader, 2048)
+	rsaKey2048, _ := rsa.GenerateKey(rand.Reader, 2048)
+	ecdsaKeyP256, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	ecdsaKeyP384, _ := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
 
 	tests := []struct {
 		name string // description of this test case
@@ -231,6 +235,21 @@ func TestJWTIssuer_Sign(t *testing.T) {
 		wantErr     bool
 	}{
 		{
+			name: "basic RS1 (want error)",
+			payload: map[string]any{
+				"sub": "subject-id",
+			},
+			issueParams: auth.JWTIssueParams{
+				Issuer: "acme-issuer",
+				Exp:    20 * time.Second,
+				Key: auth.JWTIssueKey{
+					PrivateKey: rsaKey2048,
+					Alg:        sig.SigAlgRS1,
+				},
+			},
+			wantErr: true,
+		},
+		{
 			name: "basic RS256",
 			payload: map[string]any{
 				"sub": "subject-id",
@@ -239,11 +258,86 @@ func TestJWTIssuer_Sign(t *testing.T) {
 				Issuer: "acme-issuer",
 				Exp:    20 * time.Second,
 				Key: auth.JWTIssueKey{
-					PrivateKey: rsaKey,
+					PrivateKey: rsaKey2048,
 					Alg:        sig.SigAlgRS256,
 				},
 			},
 			wantErr: false,
+		},
+		{
+			name: "basic RS384",
+			payload: map[string]any{
+				"sub": "subject-id",
+			},
+			issueParams: auth.JWTIssueParams{
+				Issuer: "acme-issuer",
+				Exp:    20 * time.Second,
+				Key: auth.JWTIssueKey{
+					PrivateKey: rsaKey2048,
+					Alg:        sig.SigAlgRS384,
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "basic RS512",
+			payload: map[string]any{
+				"sub": "subject-id",
+			},
+			issueParams: auth.JWTIssueParams{
+				Issuer: "acme-issuer",
+				Exp:    20 * time.Second,
+				Key: auth.JWTIssueKey{
+					PrivateKey: rsaKey2048,
+					Alg:        sig.SigAlgRS512,
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "basic ES256",
+			payload: map[string]any{
+				"sub": "subject-id",
+			},
+			issueParams: auth.JWTIssueParams{
+				Issuer: "acme-issuer",
+				Exp:    20 * time.Second,
+				Key: auth.JWTIssueKey{
+					PrivateKey: ecdsaKeyP256,
+					Alg:        sig.SigAlgES256,
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "basic ES384",
+			payload: map[string]any{
+				"sub": "subject-id",
+			},
+			issueParams: auth.JWTIssueParams{
+				Issuer: "acme-issuer",
+				Exp:    20 * time.Second,
+				Key: auth.JWTIssueKey{
+					PrivateKey: ecdsaKeyP384,
+					Alg:        sig.SigAlgES384,
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "basic ES384 (invalid key)",
+			payload: map[string]any{
+				"sub": "subject-id",
+			},
+			issueParams: auth.JWTIssueParams{
+				Issuer: "acme-issuer",
+				Exp:    20 * time.Second,
+				Key: auth.JWTIssueKey{
+					PrivateKey: ecdsaKeyP256,
+					Alg:        sig.SigAlgES384,
+				},
+			},
+			wantErr: true,
 		},
 	}
 	for _, tt := range tests {
