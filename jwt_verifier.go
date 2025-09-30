@@ -1,4 +1,4 @@
-package auth
+package credentials
 
 import (
 	"context"
@@ -6,7 +6,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/axent-pl/auth/logx"
+	"github.com/axent-pl/credentials/logx"
 	"github.com/golang-jwt/jwt/v5"
 )
 

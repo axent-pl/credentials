@@ -1,10 +1,10 @@
-package auth_test
+package credentials_test
 
 import (
 	"context"
 	"testing"
 
-	"github.com/axent-pl/auth"
+	"github.com/axent-pl/credentials"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -13,84 +13,84 @@ func TestClientSecretVerifier_Verify(t *testing.T) {
 	validPasswordHash, _ := bcrypt.GenerateFromPassword([]byte(validPassword), 0)
 	tests := []struct {
 		name    string
-		in      auth.Credentials
-		stored  []auth.Scheme
-		want    auth.Principal
+		in      credentials.Credentials
+		stored  []credentials.Scheme
+		want    credentials.Principal
 		wantErr bool
 	}{
 		{
 			name: "client_id exists and client_secret is valid",
-			in: auth.ClientSecretInput{
+			in: credentials.ClientSecretInput{
 				ClientID:     "acme",
 				ClientSecret: validPassword,
 			},
-			stored: []auth.Scheme{
-				auth.ClientSecretStored{
+			stored: []credentials.Scheme{
+				credentials.ClientSecretStored{
 					ClientID:   "acme",
 					SecretHash: validPasswordHash,
 				},
 			},
-			want:    auth.Principal{Subject: "acme"},
+			want:    credentials.Principal{Subject: "acme"},
 			wantErr: false,
 		},
 		{
 			name: "client_id not exists and client_secret is valid",
-			in: auth.ClientSecretInput{
+			in: credentials.ClientSecretInput{
 				ClientID:     "acme",
 				ClientSecret: validPassword,
 			},
-			stored: []auth.Scheme{
-				auth.ClientSecretStored{
+			stored: []credentials.Scheme{
+				credentials.ClientSecretStored{
 					ClientID:   "acme-other",
 					SecretHash: validPasswordHash,
 				},
 			},
-			want:    auth.Principal{},
+			want:    credentials.Principal{},
 			wantErr: true,
 		},
 		{
 			name: "client_id exists and client_secret is invalid",
-			in: auth.ClientSecretInput{
+			in: credentials.ClientSecretInput{
 				ClientID:     "acme",
 				ClientSecret: "invalid password",
 			},
-			stored: []auth.Scheme{
-				auth.ClientSecretStored{
+			stored: []credentials.Scheme{
+				credentials.ClientSecretStored{
 					ClientID:   "acme",
 					SecretHash: validPasswordHash,
 				},
 			},
-			want:    auth.Principal{},
+			want:    credentials.Principal{},
 			wantErr: true,
 		},
 		{
 			name: "empty input credentials",
-			in:   auth.ClientSecretInput{},
-			stored: []auth.Scheme{
-				auth.ClientSecretStored{
+			in:   credentials.ClientSecretInput{},
+			stored: []credentials.Scheme{
+				credentials.ClientSecretStored{
 					ClientID:   "acme",
 					SecretHash: validPasswordHash,
 				},
 			},
-			want:    auth.Principal{},
+			want:    credentials.Principal{},
 			wantErr: true,
 		},
 		{
 			name: "invalid input credentials kind",
-			in:   auth.JWTInput{},
-			stored: []auth.Scheme{
-				auth.ClientSecretStored{
+			in:   credentials.JWTInput{},
+			stored: []credentials.Scheme{
+				credentials.ClientSecretStored{
 					ClientID:   "acme",
 					SecretHash: validPasswordHash,
 				},
 			},
-			want:    auth.Principal{},
+			want:    credentials.Principal{},
 			wantErr: true,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			var v auth.ClientSecretVerifier
+			var v credentials.ClientSecretVerifier
 			got, gotErr := v.Verify(context.Background(), tt.in, tt.stored)
 			if gotErr != nil {
 				if !tt.wantErr {

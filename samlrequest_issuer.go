@@ -1,4 +1,4 @@
-package auth
+package credentials
 
 import (
 	"context"
@@ -12,8 +12,8 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/axent-pl/auth/logx"
-	"github.com/axent-pl/auth/sig"
+	"github.com/axent-pl/credentials/logx"
+	"github.com/axent-pl/credentials/sig"
 )
 
 type SAMLRequestIssueKey struct {

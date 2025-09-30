@@ -1,4 +1,4 @@
-package auth_test
+package credentials_test
 
 import (
 	"context"
@@ -9,7 +9,7 @@ import (
 	"crypto/rsa"
 	"testing"
 
-	"github.com/axent-pl/auth"
+	"github.com/axent-pl/credentials"
 )
 
 func TestSAMLRequestIssuer_Issue(t *testing.T) {
@@ -18,13 +18,13 @@ func TestSAMLRequestIssuer_Issue(t *testing.T) {
 
 	tests := []struct {
 		name        string
-		issueParams auth.IssueParams
-		want        []auth.Artifact
+		issueParams credentials.IssueParams
+		want        []credentials.Artifact
 		wantErr     bool
 	}{
 		{
 			name: "basic without signature success",
-			issueParams: auth.SAMLRequestIssueParams{
+			issueParams: credentials.SAMLRequestIssueParams{
 				Issuer:      "https://saml.application.org",
 				Destination: "https://saml.idp.org",
 			},
@@ -32,9 +32,9 @@ func TestSAMLRequestIssuer_Issue(t *testing.T) {
 		},
 		{
 			name: "basic with signature (rsa+sha256) success",
-			issueParams: auth.SAMLRequestIssueParams{
+			issueParams: credentials.SAMLRequestIssueParams{
 				Issuer: "https://saml.application.org",
-				Key: &auth.SAMLRequestIssueKey{
+				Key: &credentials.SAMLRequestIssueKey{
 					PrivateKey: rsaKey,
 					HashAlg:    crypto.SHA256,
 				},
@@ -44,9 +44,9 @@ func TestSAMLRequestIssuer_Issue(t *testing.T) {
 		},
 		{
 			name: "basic with signature (ecdsa+sha256) success",
-			issueParams: auth.SAMLRequestIssueParams{
+			issueParams: credentials.SAMLRequestIssueParams{
 				Issuer: "https://saml.application.org",
-				Key: &auth.SAMLRequestIssueKey{
+				Key: &credentials.SAMLRequestIssueKey{
 					PrivateKey: ecdsaKey,
 					HashAlg:    crypto.SHA256,
 				},
@@ -58,8 +58,8 @@ func TestSAMLRequestIssuer_Issue(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// TODO: construct the receiver type.
-			var iss auth.SAMLRequestIssuer
-			_, gotErr := iss.Issue(context.Background(), auth.Principal{}, tt.issueParams)
+			var iss credentials.SAMLRequestIssuer
+			_, gotErr := iss.Issue(context.Background(), credentials.Principal{}, tt.issueParams)
 			if gotErr != nil {
 				if !tt.wantErr {
 					t.Errorf("Issue() failed: %v", gotErr)

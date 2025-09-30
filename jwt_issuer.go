@@ -1,4 +1,4 @@
-package auth
+package credentials
 
 import (
 	"context"
@@ -8,8 +8,8 @@ import (
 	"maps"
 	"time"
 
-	"github.com/axent-pl/auth/logx"
-	"github.com/axent-pl/auth/sig"
+	"github.com/axent-pl/credentials/logx"
+	"github.com/axent-pl/credentials/sig"
 	"github.com/golang-jwt/jwt/v5"
 )
 

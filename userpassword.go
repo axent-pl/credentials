@@ -1,9 +1,9 @@
-package auth
+package credentials
 
 import (
 	"context"
 
-	"github.com/axent-pl/auth/logx"
+	"github.com/axent-pl/credentials/logx"
 	"golang.org/x/crypto/bcrypt"
 )
 

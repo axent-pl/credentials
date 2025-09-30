@@ -1,4 +1,4 @@
-package auth
+package credentials
 
 import (
 	"context"
@@ -6,8 +6,8 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/axent-pl/auth/logx"
-	"github.com/axent-pl/auth/sig"
+	"github.com/axent-pl/credentials/logx"
+	"github.com/axent-pl/credentials/sig"
 )
 
 type SAMLRequestVerifier struct{}

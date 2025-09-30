@@ -1,10 +1,10 @@
-package auth
+package credentials
 
 import (
 	"crypto"
 	"time"
 
-	"github.com/axent-pl/auth/sig"
+	"github.com/axent-pl/credentials/sig"
 )
 
 type JWTScheme struct {

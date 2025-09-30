@@ -1,9 +1,9 @@
-package auth
+package credentials
 
 import (
 	"crypto"
 
-	"github.com/axent-pl/auth/sig"
+	"github.com/axent-pl/credentials/sig"
 )
 
 type SAMLRequestScheme struct {

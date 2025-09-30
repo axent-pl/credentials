@@ -1,4 +1,4 @@
-module github.com/axent-pl/auth
+module github.com/axent-pl/credentials
 
 go 1.25.0
 

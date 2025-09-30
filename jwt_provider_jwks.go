@@ -1,4 +1,4 @@
-package auth
+package credentials
 
 import (
 	"context"
@@ -15,7 +15,7 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/axent-pl/auth/sig"
+	"github.com/axent-pl/credentials/sig"
 )
 
 type JWKSProvider struct {
