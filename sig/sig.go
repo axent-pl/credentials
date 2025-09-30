@@ -161,17 +161,9 @@ func (sa SigAlg) ToCryptoHash() (*crypto.Hash, error) {
 
 // ---------- crypto.Hash + key type <-> Alg ----------
 
-type KeyKind int
-
-const (
-	KeyUnknown KeyKind = iota
-	KeyRSA
-	KeyECDSA
-)
-
 type CryptoSpec struct {
 	Hash  crypto.Hash
-	Key   KeyKind
+	Key   any
 	IsPSS bool // true -> PS*, false -> RS* (for RSA); ignored for ECDSA
 }
 
@@ -179,25 +171,25 @@ type CryptoSpec struct {
 func (sa SigAlg) ToCrypto() (CryptoSpec, error) {
 	switch sa {
 	case SigAlgRS1:
-		return CryptoSpec{Hash: crypto.SHA1, Key: KeyRSA, IsPSS: false}, nil
+		return CryptoSpec{Hash: crypto.SHA1, Key: (*rsa.PublicKey)(nil), IsPSS: false}, nil
 	case SigAlgRS256:
-		return CryptoSpec{Hash: crypto.SHA256, Key: KeyRSA, IsPSS: false}, nil
+		return CryptoSpec{Hash: crypto.SHA256, Key: (*rsa.PublicKey)(nil), IsPSS: false}, nil
 	case SigAlgRS384:
-		return CryptoSpec{Hash: crypto.SHA384, Key: KeyRSA, IsPSS: false}, nil
+		return CryptoSpec{Hash: crypto.SHA384, Key: (*rsa.PublicKey)(nil), IsPSS: false}, nil
 	case SigAlgRS512:
-		return CryptoSpec{Hash: crypto.SHA512, Key: KeyRSA, IsPSS: false}, nil
+		return CryptoSpec{Hash: crypto.SHA512, Key: (*rsa.PublicKey)(nil), IsPSS: false}, nil
 	case SigAlgES256:
-		return CryptoSpec{Hash: crypto.SHA256, Key: KeyECDSA, IsPSS: false}, nil
+		return CryptoSpec{Hash: crypto.SHA256, Key: (*ecdsa.PublicKey)(nil), IsPSS: false}, nil
 	case SigAlgES384:
-		return CryptoSpec{Hash: crypto.SHA384, Key: KeyECDSA, IsPSS: false}, nil
+		return CryptoSpec{Hash: crypto.SHA384, Key: (*ecdsa.PublicKey)(nil), IsPSS: false}, nil
 	case SigAlgES512:
-		return CryptoSpec{Hash: crypto.SHA512, Key: KeyECDSA, IsPSS: false}, nil
+		return CryptoSpec{Hash: crypto.SHA512, Key: (*ecdsa.PublicKey)(nil), IsPSS: false}, nil
 	case SigAlgPS256:
-		return CryptoSpec{Hash: crypto.SHA256, Key: KeyRSA, IsPSS: true}, nil
+		return CryptoSpec{Hash: crypto.SHA256, Key: (*rsa.PublicKey)(nil), IsPSS: true}, nil
 	case SigAlgPS384:
-		return CryptoSpec{Hash: crypto.SHA384, Key: KeyRSA, IsPSS: true}, nil
+		return CryptoSpec{Hash: crypto.SHA384, Key: (*rsa.PublicKey)(nil), IsPSS: true}, nil
 	case SigAlgPS512:
-		return CryptoSpec{Hash: crypto.SHA512, Key: KeyRSA, IsPSS: true}, nil
+		return CryptoSpec{Hash: crypto.SHA512, Key: (*rsa.PublicKey)(nil), IsPSS: true}, nil
 	default:
 		return CryptoSpec{}, fmt.Errorf("no crypto mapping for %v", sa)
 	}
@@ -205,7 +197,7 @@ func (sa SigAlg) ToCrypto() (CryptoSpec, error) {
 
 // FromCrypto infers Alg from (hash + key type). For RSA it returns *RS* by default.
 // Use FromCryptoPSS for RSA-PSS (PS*).
-func FromCrypto(hash crypto.Hash, key interface{}) (SigAlg, error) {
+func FromCrypto(hash crypto.Hash, key any) (SigAlg, error) {
 	switch key.(type) {
 	case *rsa.PrivateKey, *rsa.PublicKey:
 		switch hash {
@@ -237,7 +229,7 @@ func FromCrypto(hash crypto.Hash, key interface{}) (SigAlg, error) {
 }
 
 // FromCryptoPSS is identical to FromCrypto, but for RSA returns PS* (RSA-PSS).
-func FromCryptoPSS(hash crypto.Hash, key interface{}) (SigAlg, error) {
+func FromCryptoPSS(hash crypto.Hash, key any) (SigAlg, error) {
 	switch key.(type) {
 	case *rsa.PrivateKey, *rsa.PublicKey:
 		switch hash {

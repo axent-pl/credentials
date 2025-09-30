@@ -27,7 +27,7 @@ func Verify(signature, digest []byte, pubKey crypto.PublicKey, sigAlg SigAlg) er
 
 	switch k := pubKey.(type) {
 	case rsa.PublicKey:
-		if spec.Key != KeyRSA {
+		if _, ok := spec.Key.(*rsa.PublicKey); !ok {
 			return fmt.Errorf("algorithm %v expects non-RSA key", sigAlg)
 		}
 		if spec.IsPSS {
@@ -45,7 +45,7 @@ func Verify(signature, digest []byte, pubKey crypto.PublicKey, sigAlg SigAlg) er
 		return nil
 
 	case ecdsa.PublicKey:
-		if spec.Key != KeyECDSA {
+		if _, ok := spec.Key.(*ecdsa.PublicKey); !ok {
 			return fmt.Errorf("algorithm %v expects non-ECDSA key", sigAlg)
 		}
 		R, S, err := parseECDSASignature(signature, k.Params().BitSize)
