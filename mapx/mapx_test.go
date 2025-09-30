@@ -56,7 +56,7 @@ func TestGet(t *testing.T) {
 		{
 			name:    "recursive map",
 			root:    data,
-			path:    "..foo",
+			path:    "..[\"foo\"]",
 			want:    []any{"bar", "barbar"},
 			wantErr: false,
 		},

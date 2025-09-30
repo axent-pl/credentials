@@ -15,3 +15,6 @@ sast-govulncheck:
 
 sast: sast-gosec sast-govulncheck
 	@echo "SAST completed"
+
+test:
+	go test ./...
