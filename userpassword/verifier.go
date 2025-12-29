@@ -1,43 +1,30 @@
-package credentials
+package userpassword
 
 import (
 	"context"
 
+	"github.com/axent-pl/credentials/common"
 	"github.com/axent-pl/credentials/logx"
 	"golang.org/x/crypto/bcrypt"
 )
 
-type UserPasswordInput struct {
-	Username string
-	Password string
-}
-
-func (UserPasswordInput) Kind() Kind { return CredPassword }
-
-type UserPasswordScheme struct {
-	Username     string
-	PasswordHash []byte
-}
-
-func (UserPasswordScheme) Kind() Kind { return CredPassword }
-
 type UserPasswordVerifier struct{}
 
-func (v *UserPasswordVerifier) Kind() Kind { return CredPassword }
+func (v *UserPasswordVerifier) Kind() common.Kind { return common.Password }
 
-func (v *UserPasswordVerifier) Verify(ctx context.Context, in Credentials, schemes []Scheme) (Principal, error) {
+func (v *UserPasswordVerifier) Verify(ctx context.Context, in common.Credentials, schemes []common.Scheme) (common.Principal, error) {
 	userPasswordInput, ok := in.(UserPasswordInput)
 	if !ok {
 		logx.L().Debug("could not cast InputCredentials to UserPasswordInput", "context", ctx)
-		return Principal{}, ErrInvalidInput
+		return common.Principal{}, common.ErrInvalidInput
 	}
 	if userPasswordInput.Username == "" {
 		logx.L().Debug("empty username", "context", ctx)
-		return Principal{}, ErrInvalidInput
+		return common.Principal{}, common.ErrInvalidInput
 	}
 	if userPasswordInput.Password == "" {
 		logx.L().Debug("empty password", "context", ctx)
-		return Principal{}, ErrInvalidInput
+		return common.Principal{}, common.ErrInvalidInput
 	}
 	for _, s := range schemes {
 		userPasswordScheme, ok := s.(UserPasswordScheme)
@@ -48,7 +35,7 @@ func (v *UserPasswordVerifier) Verify(ctx context.Context, in Credentials, schem
 			continue
 		}
 
-		return Principal{Subject: SubjectID(userPasswordScheme.Username)}, nil
+		return common.Principal{Subject: common.SubjectID(userPasswordScheme.Username)}, nil
 	}
-	return Principal{}, ErrInvalidCredentials
+	return common.Principal{}, common.ErrInvalidCredentials
 }

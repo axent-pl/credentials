@@ -1,18 +1,22 @@
 package credentials
 
-import "context"
+import (
+	"context"
+
+	"github.com/axent-pl/credentials/common"
+)
 
 type ValidationSchemeProvider interface {
-	ValidationSchemes(ctx context.Context, in Credentials) ([]Scheme, error)
+	ValidationSchemes(ctx context.Context, in common.Credentials) ([]common.Scheme, error)
 }
 
 type ValidationSchemeProviderSet struct {
 	Providers []ValidationSchemeProvider
 }
 
-func (s *ValidationSchemeProviderSet) ValidationSchemes(ctx context.Context, in Credentials) ([]Scheme, error) {
+func (s *ValidationSchemeProviderSet) ValidationSchemes(ctx context.Context, in common.Credentials) ([]common.Scheme, error) {
 	var lastErr error
-	var schemes []Scheme = make([]Scheme, 0)
+	var schemes []common.Scheme = make([]common.Scheme, 0)
 	for _, p := range s.Providers {
 		providerSchemes, err := p.ValidationSchemes(ctx, in)
 		if err == nil {

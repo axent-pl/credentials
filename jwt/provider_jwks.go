@@ -1,4 +1,4 @@
-package credentials
+package jwt
 
 import (
 	"context"
@@ -17,6 +17,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/axent-pl/credentials/common"
 	"github.com/axent-pl/credentials/sig"
 )
 
@@ -26,7 +27,7 @@ type JWKSProvider struct {
 	RefreshInterval time.Duration // RefreshInterval <= 0 disables cache refresh
 
 	mu        sync.RWMutex
-	cached    []Scheme
+	cached    []common.Scheme
 	lastErr   error
 	etag      string
 	lastMod   string
@@ -161,11 +162,11 @@ func JwkToPublicKey(k jwkKey) (crypto.PublicKey, error) {
 
 // ValidationSchemes returns cached schemes if available.
 // If the cache is empty (first call or previous failures), it performs a synchronous refresh.
-func (p *JWKSProvider) ValidationSchemes(ctx context.Context, in Credentials) ([]Scheme, error) {
+func (p *JWKSProvider) ValidationSchemes(ctx context.Context, in common.Credentials) ([]common.Scheme, error) {
 	// Fast path: serve from cache if primed.
 	p.mu.RLock()
 	if len(p.cached) > 0 {
-		cached := make([]Scheme, len(p.cached))
+		cached := make([]common.Scheme, len(p.cached))
 		copy(cached, p.cached)
 		p.mu.RUnlock()
 		return cached, nil
@@ -185,7 +186,7 @@ func (p *JWKSProvider) ValidationSchemes(ctx context.Context, in Credentials) ([
 		}
 		return nil, errors.New("jwks: cache empty after refresh")
 	}
-	out := make([]Scheme, len(p.cached))
+	out := make([]common.Scheme, len(p.cached))
 	copy(out, p.cached)
 	return out, nil
 }
@@ -297,7 +298,7 @@ func (p *JWKSProvider) refresh(ctx context.Context) error {
 	}
 
 	// Update cache + validators atomically.
-	newCache := []Scheme{scheme}
+	newCache := []common.Scheme{scheme}
 	etag := resp.Header.Get("ETag")
 	lastMod := resp.Header.Get("Last-Modified")
 

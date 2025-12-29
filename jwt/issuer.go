@@ -1,4 +1,4 @@
-package credentials
+package jwt
 
 import (
 	"context"
@@ -8,9 +8,10 @@ import (
 	"maps"
 	"time"
 
+	"github.com/axent-pl/credentials/common"
 	"github.com/axent-pl/credentials/logx"
 	"github.com/axent-pl/credentials/sig"
-	"github.com/golang-jwt/jwt/v5"
+	jwtx "github.com/golang-jwt/jwt/v5"
 )
 
 type JWTIssueKey struct {
@@ -25,7 +26,7 @@ type JWTIssueParams struct {
 	Exp    time.Duration
 	Key    JWTIssueKey
 
-	AuthorizedParty SubjectID
+	AuthorizedParty common.SubjectID
 
 	AccessIncludedClaims  []string
 	AccessOverlayClaims   map[string]any
@@ -35,42 +36,42 @@ type JWTIssueParams struct {
 	RefreshOverlayClaims  map[string]any
 }
 
-func (JWTIssueParams) Kind() Kind { return CredJWT }
+func (JWTIssueParams) Kind() common.Kind { return common.JWT }
 
 // issuer
 type JWTIssuer struct {
 }
 
-func (JWTIssuer) Kind() Kind { return CredJWT }
+func (JWTIssuer) Kind() common.Kind { return common.JWT }
 
-func (iss *JWTIssuer) Issue(ctx context.Context, principal Principal, issueParams IssueParams) ([]Artifact, error) {
+func (iss *JWTIssuer) Issue(ctx context.Context, principal common.Principal, issueParams common.IssueParams) ([]common.Artifact, error) {
 	jwtIssueParams, ok := issueParams.(JWTIssueParams)
 	if !ok {
 		logx.L().Debug("could not cast IssueParams to JWTIssueParams", "context", ctx)
-		return nil, ErrInternal
+		return nil, common.ErrInternal
 	}
 
 	baseClaims, err := iss.BaseClaims(ctx, principal, jwtIssueParams)
 	if err != nil {
 		logx.L().Debug("could not build base claims", "context", ctx, "error", err)
-		return nil, ErrInternal
+		return nil, common.ErrInternal
 	}
 
-	artifacts := make([]Artifact, 0)
+	artifacts := make([]common.Artifact, 0)
 
 	// access token
 	accessClaims, err := iss.PatchedClaims(ctx, principal, baseClaims, jwtIssueParams.AccessIncludedClaims, jwtIssueParams.AccessOverlayClaims)
 	if err != nil {
 		logx.L().Debug("could not build access token claims", "context", ctx, "error", err)
-		return nil, ErrInternal
+		return nil, common.ErrInternal
 	}
 	accessTokenBytes, err := iss.Sign(accessClaims, jwtIssueParams)
 	if err != nil {
 		logx.L().Debug("could not sign access token", "context", ctx, "error", err)
-		return nil, ErrInternal
+		return nil, common.ErrInternal
 	}
-	artifacts = append(artifacts, Artifact{
-		Kind:      ArtifactAccessToken,
+	artifacts = append(artifacts, common.Artifact{
+		Kind:      common.ArtifactAccessToken,
 		MediaType: "application/jwt",
 		Bytes:     accessTokenBytes,
 	})
@@ -79,15 +80,15 @@ func (iss *JWTIssuer) Issue(ctx context.Context, principal Principal, issueParam
 	idClaims, err := iss.PatchedClaims(ctx, principal, baseClaims, jwtIssueParams.IdIncludedClaims, jwtIssueParams.IdOverlayClaims)
 	if err != nil {
 		logx.L().Debug("could not build id token claims", "context", ctx, "error", err)
-		return nil, ErrInternal
+		return nil, common.ErrInternal
 	}
 	idTokenBytes, err := iss.Sign(idClaims, jwtIssueParams)
 	if err != nil {
 		logx.L().Debug("could not sign id token", "context", ctx, "error", err)
-		return nil, ErrInternal
+		return nil, common.ErrInternal
 	}
-	artifacts = append(artifacts, Artifact{
-		Kind:      ArtifactIdToken,
+	artifacts = append(artifacts, common.Artifact{
+		Kind:      common.ArtifactIdToken,
 		MediaType: "application/jwt",
 		Bytes:     idTokenBytes,
 	})
@@ -96,15 +97,15 @@ func (iss *JWTIssuer) Issue(ctx context.Context, principal Principal, issueParam
 	refreshClaims, err := iss.PatchedClaims(ctx, principal, baseClaims, jwtIssueParams.RefreshIncludedClaims, jwtIssueParams.RefreshOverlayClaims)
 	if err != nil {
 		logx.L().Debug("could not build refresh token claims", "context", ctx, "error", err)
-		return nil, ErrInternal
+		return nil, common.ErrInternal
 	}
 	refreshTokenBytes, err := iss.Sign(refreshClaims, jwtIssueParams)
 	if err != nil {
 		logx.L().Debug("could not sign refresh token", "context", ctx, "error", err)
-		return nil, ErrInternal
+		return nil, common.ErrInternal
 	}
-	artifacts = append(artifacts, Artifact{
-		Kind:      ArtifactRefreshToken,
+	artifacts = append(artifacts, common.Artifact{
+		Kind:      common.ArtifactRefreshToken,
 		MediaType: "application/jwt",
 		Bytes:     refreshTokenBytes,
 	})
@@ -120,10 +121,10 @@ func (iss *JWTIssuer) Issue(ctx context.Context, principal Principal, issueParam
 	respBytes, err := json.Marshal(tokenResponse)
 	if err != nil {
 		logx.L().Debug("could not marshal oauth2 token response", "context", ctx, "error", err)
-		return nil, ErrInternal
+		return nil, common.ErrInternal
 	}
-	artifacts = append(artifacts, Artifact{
-		Kind:      ArtifactOAuth2TokenResponse,
+	artifacts = append(artifacts, common.Artifact{
+		Kind:      common.ArtifactOAuth2TokenResponse,
 		MediaType: "application/json",
 		Bytes:     respBytes,
 	})
@@ -132,7 +133,7 @@ func (iss *JWTIssuer) Issue(ctx context.Context, principal Principal, issueParam
 }
 
 func (iss *JWTIssuer) Sign(payload map[string]any, params JWTIssueParams) ([]byte, error) {
-	claims := jwt.MapClaims{}
+	claims := jwtx.MapClaims{}
 	maps.Copy(claims, payload)
 
 	signingMethod, err := params.Key.Alg.ToGoJWT()
@@ -140,7 +141,7 @@ func (iss *JWTIssuer) Sign(payload map[string]any, params JWTIssueParams) ([]byt
 		return nil, fmt.Errorf("could not sign payload: %w", err)
 	}
 
-	token := jwt.NewWithClaims(signingMethod, claims)
+	token := jwtx.NewWithClaims(signingMethod, claims)
 	if params.Key.Kid != "" {
 		token.Header["kid"] = params.Key.Kid
 	}
@@ -152,7 +153,7 @@ func (iss *JWTIssuer) Sign(payload map[string]any, params JWTIssueParams) ([]byt
 	return []byte(tokenString), nil
 }
 
-func (iss *JWTIssuer) PatchedClaims(ctx context.Context, principal Principal, baseClaims map[string]any, includedClaims []string, overlayClaims map[string]any) (map[string]any, error) {
+func (iss *JWTIssuer) PatchedClaims(ctx context.Context, principal common.Principal, baseClaims map[string]any, includedClaims []string, overlayClaims map[string]any) (map[string]any, error) {
 	// 1) clone baseClaims
 	out := maps.Clone(baseClaims)
 
@@ -177,7 +178,7 @@ func (iss *JWTIssuer) PatchedClaims(ctx context.Context, principal Principal, ba
 	return out, nil
 }
 
-func (iss *JWTIssuer) BaseClaims(ctx context.Context, principal Principal, issueParams JWTIssueParams) (map[string]any, error) {
+func (iss *JWTIssuer) BaseClaims(ctx context.Context, principal common.Principal, issueParams JWTIssueParams) (map[string]any, error) {
 	claims := make(map[string]any)
 	claims["sub"] = string(principal.Subject)
 	claims["iss"] = issueParams.Issuer

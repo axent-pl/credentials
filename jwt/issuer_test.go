@@ -1,4 +1,4 @@
-package credentials_test
+package jwt_test
 
 import (
 	"context"
@@ -10,7 +10,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/axent-pl/credentials"
+	"github.com/axent-pl/credentials/common"
+	"github.com/axent-pl/credentials/jwt"
 	"github.com/axent-pl/credentials/sig"
 )
 
@@ -62,16 +63,16 @@ func TestJWTIssuer_BaseClaims(t *testing.T) {
 	tests := []struct {
 		name string // description of this test case
 		// Named input parameters for target function.
-		principal   credentials.Principal
-		issueParams credentials.JWTIssueParams
+		principal   common.Principal
+		issueParams jwt.JWTIssueParams
 		want        map[string]any
 		checks      []ClaimCheckFunction
 		wantErr     bool
 	}{
 		{
 			name:      "basic",
-			principal: credentials.Principal{Subject: "subject-id"},
-			issueParams: credentials.JWTIssueParams{
+			principal: common.Principal{Subject: "subject-id"},
+			issueParams: jwt.JWTIssueParams{
 				AuthorizedParty: "acme-registered-app",
 				Issuer:          "https://acme-auth-server.com",
 				Exp:             30 * time.Second,
@@ -87,8 +88,8 @@ func TestJWTIssuer_BaseClaims(t *testing.T) {
 		},
 		{
 			name:      "no scheme.Exp",
-			principal: credentials.Principal{Subject: "subject-id"},
-			issueParams: credentials.JWTIssueParams{
+			principal: common.Principal{Subject: "subject-id"},
+			issueParams: jwt.JWTIssueParams{
 				Issuer:          "https://acme-auth-server.com",
 				AuthorizedParty: "acme-registered-app",
 			},
@@ -103,8 +104,8 @@ func TestJWTIssuer_BaseClaims(t *testing.T) {
 		},
 		{
 			name:        "no azp",
-			principal:   credentials.Principal{Subject: "subject-id"},
-			issueParams: credentials.JWTIssueParams{Issuer: "https://acme-auth-server.com", Exp: 30 * time.Second},
+			principal:   common.Principal{Subject: "subject-id"},
+			issueParams: jwt.JWTIssueParams{Issuer: "https://acme-auth-server.com", Exp: 30 * time.Second},
 			checks: []ClaimCheckFunction{
 				CheckClaimStringValue("sub", "subject-id"),
 				CheckClaimStringValue("iss", "https://acme-auth-server.com"),
@@ -117,7 +118,7 @@ func TestJWTIssuer_BaseClaims(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			var iss credentials.JWTIssuer
+			var iss jwt.JWTIssuer
 			got, gotErr := iss.BaseClaims(context.Background(), tt.principal, tt.issueParams)
 			if gotErr != nil {
 				if !tt.wantErr {
@@ -142,7 +143,7 @@ func TestJWTIssuer_PatchedClaims(t *testing.T) {
 	tests := []struct {
 		name string // description of this test case
 		// Named input parameters for target function.
-		principal      credentials.Principal
+		principal      common.Principal
 		baseClaims     map[string]any
 		includedClaims []string
 		overlayClaims  map[string]any
@@ -184,7 +185,7 @@ func TestJWTIssuer_PatchedClaims(t *testing.T) {
 				"sub": "subject-id",
 				"iss": "https://acme-auth-server.com",
 			},
-			principal: credentials.Principal{
+			principal: common.Principal{
 				Attributes: map[string]any{
 					"first_name": "Jane",
 				},
@@ -201,7 +202,7 @@ func TestJWTIssuer_PatchedClaims(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			var iss credentials.JWTIssuer
+			var iss jwt.JWTIssuer
 			got, gotErr := iss.PatchedClaims(context.Background(), tt.principal, tt.baseClaims, tt.includedClaims, tt.overlayClaims)
 			if gotErr != nil {
 				if !tt.wantErr {
@@ -230,7 +231,7 @@ func TestJWTIssuer_Sign(t *testing.T) {
 		name string // description of this test case
 		// Named input parameters for target function.
 		payload     map[string]any
-		issueParams credentials.JWTIssueParams
+		issueParams jwt.JWTIssueParams
 		want        []byte
 		wantErr     bool
 	}{
@@ -239,10 +240,10 @@ func TestJWTIssuer_Sign(t *testing.T) {
 			payload: map[string]any{
 				"sub": "subject-id",
 			},
-			issueParams: credentials.JWTIssueParams{
+			issueParams: jwt.JWTIssueParams{
 				Issuer: "acme-issuer",
 				Exp:    20 * time.Second,
-				Key: credentials.JWTIssueKey{
+				Key: jwt.JWTIssueKey{
 					PrivateKey: rsaKey2048,
 					Alg:        sig.SigAlgRS1,
 				},
@@ -254,10 +255,10 @@ func TestJWTIssuer_Sign(t *testing.T) {
 			payload: map[string]any{
 				"sub": "subject-id",
 			},
-			issueParams: credentials.JWTIssueParams{
+			issueParams: jwt.JWTIssueParams{
 				Issuer: "acme-issuer",
 				Exp:    20 * time.Second,
-				Key: credentials.JWTIssueKey{
+				Key: jwt.JWTIssueKey{
 					PrivateKey: rsaKey2048,
 					Alg:        sig.SigAlgRS256,
 				},
@@ -269,10 +270,10 @@ func TestJWTIssuer_Sign(t *testing.T) {
 			payload: map[string]any{
 				"sub": "subject-id",
 			},
-			issueParams: credentials.JWTIssueParams{
+			issueParams: jwt.JWTIssueParams{
 				Issuer: "acme-issuer",
 				Exp:    20 * time.Second,
-				Key: credentials.JWTIssueKey{
+				Key: jwt.JWTIssueKey{
 					PrivateKey: rsaKey2048,
 					Alg:        sig.SigAlgRS384,
 				},
@@ -284,10 +285,10 @@ func TestJWTIssuer_Sign(t *testing.T) {
 			payload: map[string]any{
 				"sub": "subject-id",
 			},
-			issueParams: credentials.JWTIssueParams{
+			issueParams: jwt.JWTIssueParams{
 				Issuer: "acme-issuer",
 				Exp:    20 * time.Second,
-				Key: credentials.JWTIssueKey{
+				Key: jwt.JWTIssueKey{
 					PrivateKey: rsaKey2048,
 					Alg:        sig.SigAlgRS512,
 				},
@@ -299,10 +300,10 @@ func TestJWTIssuer_Sign(t *testing.T) {
 			payload: map[string]any{
 				"sub": "subject-id",
 			},
-			issueParams: credentials.JWTIssueParams{
+			issueParams: jwt.JWTIssueParams{
 				Issuer: "acme-issuer",
 				Exp:    20 * time.Second,
-				Key: credentials.JWTIssueKey{
+				Key: jwt.JWTIssueKey{
 					PrivateKey: ecdsaKeyP256,
 					Alg:        sig.SigAlgES256,
 				},
@@ -314,10 +315,10 @@ func TestJWTIssuer_Sign(t *testing.T) {
 			payload: map[string]any{
 				"sub": "subject-id",
 			},
-			issueParams: credentials.JWTIssueParams{
+			issueParams: jwt.JWTIssueParams{
 				Issuer: "acme-issuer",
 				Exp:    20 * time.Second,
-				Key: credentials.JWTIssueKey{
+				Key: jwt.JWTIssueKey{
 					PrivateKey: ecdsaKeyP384,
 					Alg:        sig.SigAlgES384,
 				},
@@ -329,10 +330,10 @@ func TestJWTIssuer_Sign(t *testing.T) {
 			payload: map[string]any{
 				"sub": "subject-id",
 			},
-			issueParams: credentials.JWTIssueParams{
+			issueParams: jwt.JWTIssueParams{
 				Issuer: "acme-issuer",
 				Exp:    20 * time.Second,
-				Key: credentials.JWTIssueKey{
+				Key: jwt.JWTIssueKey{
 					PrivateKey: ecdsaKeyP256,
 					Alg:        sig.SigAlgES384,
 				},
@@ -342,7 +343,7 @@ func TestJWTIssuer_Sign(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			var iss credentials.JWTIssuer
+			var iss jwt.JWTIssuer
 			_, gotErr := iss.Sign(tt.payload, tt.issueParams)
 			if gotErr != nil {
 				if !tt.wantErr {
@@ -362,19 +363,19 @@ func TestJWTIssuer_Issue(t *testing.T) {
 
 	tests := []struct {
 		name        string
-		principal   credentials.Principal
-		issueParams credentials.IssueParams
+		principal   common.Principal
+		issueParams common.IssueParams
 		wantErr     bool
 	}{
 		{
 			name: "basic RS256",
-			principal: credentials.Principal{
+			principal: common.Principal{
 				Subject: "subject-id",
 			},
-			issueParams: credentials.JWTIssueParams{
+			issueParams: jwt.JWTIssueParams{
 				Issuer: "acme-issuer",
 				Exp:    20 * time.Second,
-				Key: credentials.JWTIssueKey{
+				Key: jwt.JWTIssueKey{
 					PrivateKey: rsaKey,
 					Alg:        sig.SigAlgRS256,
 				},
@@ -385,7 +386,7 @@ func TestJWTIssuer_Issue(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// TODO: construct the receiver type.
-			var iss credentials.JWTIssuer
+			var iss jwt.JWTIssuer
 			_, gotErr := iss.Issue(context.Background(), tt.principal, tt.issueParams)
 			if gotErr != nil {
 				if !tt.wantErr {

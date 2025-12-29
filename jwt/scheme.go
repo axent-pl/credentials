@@ -1,14 +1,15 @@
-package credentials
+package jwt
 
 import (
 	"crypto"
 	"time"
 
+	"github.com/axent-pl/credentials/common"
 	"github.com/axent-pl/credentials/sig"
 )
 
 type JWTScheme struct {
-	Subject      SubjectID
+	Subject      common.SubjectID
 	MustMatchKid bool
 	Keys         []JWTSchemeKey
 	Issuer       string
@@ -28,4 +29,4 @@ type JWTSchemeKey struct {
 	Alg sig.SigAlg
 }
 
-func (JWTScheme) Kind() Kind { return CredJWT }
+func (JWTScheme) Kind() common.Kind { return common.JWT }

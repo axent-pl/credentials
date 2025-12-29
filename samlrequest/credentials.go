@@ -1,4 +1,4 @@
-package credentials
+package samlrequest
 
 import (
 	"bytes"
@@ -10,11 +10,13 @@ import (
 	"io"
 	"net/url"
 	"strings"
+
+	"github.com/axent-pl/credentials/common"
 )
 
-// SAMLRequestInput represents the HTTP request parameters typically passed
+// SAMLRequestCredentials represents the HTTP request parameters typically passed
 // in a SAML AuthnRequest (usually sent via Redirect or POST binding).
-type SAMLRequestInput struct {
+type SAMLRequestCredentials struct {
 	// SAMLRequest: Required.
 	// The actual base64-encoded (and often deflated) XML AuthnRequest message.
 	SAMLRequest string
@@ -35,7 +37,7 @@ type SAMLRequestInput struct {
 	Signature string
 }
 
-func (SAMLRequestInput) Kind() Kind { return CredSAMLRequest }
+func (SAMLRequestCredentials) Kind() common.Kind { return common.SAMLRequest }
 
 // SAMLRequestXML represents the XML <AuthnRequest> element
 // defined in SAML 2.0 Core specification (protocol namespace).
@@ -113,7 +115,7 @@ type SAMLRequestNameIDPolicyXML struct {
 // SignedQuery creates the exact byte sequence signed for Redirect binding:
 // "SAMLRequest=<val>[&RelayState=<val>]&SigAlg=<val>"
 // Each value must be percent-encoded per RFC 3986 (same as url.QueryEscape).
-func (r *SAMLRequestInput) SignedQuery() []byte {
+func (r *SAMLRequestCredentials) SignedQuery() []byte {
 	var b strings.Builder
 	b.WriteString("SAMLRequest=")
 	b.WriteString(url.QueryEscape(r.SAMLRequest))
@@ -126,7 +128,7 @@ func (r *SAMLRequestInput) SignedQuery() []byte {
 	return []byte(b.String())
 }
 
-func (r *SAMLRequestInput) MarshalSAMLRequest(x SAMLRequestXML) error {
+func (r *SAMLRequestCredentials) MarshalSAMLRequest(x SAMLRequestXML) error {
 	xmlBytes, err := xml.Marshal(x) // compact; keep it deterministic
 	if err != nil {
 		return err
@@ -149,7 +151,7 @@ func (r *SAMLRequestInput) MarshalSAMLRequest(x SAMLRequestXML) error {
 	return nil
 }
 
-func (r *SAMLRequestInput) UnmarshalSAMLRequest() (*SAMLRequestXML, error) {
+func (r *SAMLRequestCredentials) UnmarshalSAMLRequest() (*SAMLRequestXML, error) {
 	// 1) Base64 decode
 	compressed, err := base64.StdEncoding.DecodeString(r.SAMLRequest)
 	if err != nil {
@@ -182,13 +184,13 @@ func (r *SAMLRequestInput) UnmarshalSAMLRequest() (*SAMLRequestXML, error) {
 	return &req, nil
 }
 
-func (v *SAMLRequestInput) inflateRawDeflate(b []byte) ([]byte, error) {
+func (v *SAMLRequestCredentials) inflateRawDeflate(b []byte) ([]byte, error) {
 	r := flate.NewReader(bytes.NewReader(b))
 	defer r.Close()
 	return io.ReadAll(r)
 }
 
-func (v *SAMLRequestInput) inflateZlib(b []byte) ([]byte, error) {
+func (v *SAMLRequestCredentials) inflateZlib(b []byte) ([]byte, error) {
 	r, err := zlib.NewReader(bytes.NewReader(b))
 	if err != nil {
 		return nil, err
@@ -197,7 +199,7 @@ func (v *SAMLRequestInput) inflateZlib(b []byte) ([]byte, error) {
 	return io.ReadAll(r)
 }
 
-func (r *SAMLRequestInput) looksLikeXML(b []byte) bool {
+func (r *SAMLRequestCredentials) looksLikeXML(b []byte) bool {
 	// Trim a tiny bit of whitespace and check for '<'
 	i := 0
 	for i < len(b) && (b[i] == ' ' || b[i] == '\n' || b[i] == '\r' || b[i] == '\t') {

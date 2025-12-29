@@ -1,12 +1,12 @@
-package credentials
+package clientassertion
 
 import (
 	"context"
 	"crypto"
 	"errors"
 	"fmt"
-	"time"
 
+	"github.com/axent-pl/credentials/common"
 	"github.com/axent-pl/credentials/logx"
 	"github.com/golang-jwt/jwt/v5"
 )
@@ -14,65 +14,29 @@ import (
 // Common URN per RFC 7523 / OAuth 2.0 JWT bearer assertions.
 const URNClientAssertionType = "urn:ietf:params:oauth:client-assertion-type:jwt-bearer"
 
-type ClientAssertionInput struct {
-	ClientId            string
-	ClientAssertionType string
-	ClientAssertion     string
-}
-
-func (ClientAssertionInput) Kind() Kind { return CredClientAssertion }
-
-type ClientAssertionScheme struct {
-	// Should be present,
-	// assertions are usually self signed
-	// and attacker could take over application X
-	// and issue assertion with sub=Y
-	Subject      SubjectID
-	MustMatchKid bool
-	Keys         []ClientAssertionSchemeKey
-	// It should be present,
-	// for self signed assertion its value will be the same as "sub"
-	Issuer string
-	// Shoudl be present
-	// and the value needs to be the URL of the /token endpoint.
-	// Otherwise attacker may use a token not meant
-	// for client authenticatio with client_assertion.
-	Audience string
-	Leeway   time.Duration
-	Replay   ReplayChecker
-}
-
-type ClientAssertionSchemeKey struct {
-	Kid       string
-	PublicKey crypto.PublicKey
-	Alg       string
-}
-
-func (ClientAssertionScheme) Kind() Kind { return CredClientAssertion }
-
 type ClientAssertionVerifier struct{}
 
-func (v *ClientAssertionVerifier) Kind() Kind { return CredClientAssertion }
+func (v *ClientAssertionVerifier) Kind() common.Kind { return common.ClientAssertion }
 
-func (v *ClientAssertionVerifier) Verify(ctx context.Context, in Credentials, schemes []Scheme) (Principal, error) {
+func (v *ClientAssertionVerifier) Verify(ctx context.Context, in common.Credentials, schemes []common.Scheme) (common.Principal, error) {
 	clientAssertionInput, ok := in.(ClientAssertionInput)
 	if !ok {
 		logx.L().Debug("could not cast InputCredentials to ClientAssertionInput", "context", ctx)
-		return Principal{}, ErrInvalidInput
+		return common.Principal{}, common.ErrInvalidInput
 	}
 	if clientAssertionInput.ClientAssertion == "" {
 		logx.L().Debug("empty client_assertion", "context", ctx)
-		return Principal{}, ErrInvalidInput
+		return common.Principal{}, common.ErrInvalidInput
 	}
 	if clientAssertionInput.ClientAssertionType != URNClientAssertionType {
 		logx.L().Debug(fmt.Sprintf("invalid client_assertion_type: got '%s', want '%s", clientAssertionInput.ClientAssertionType, URNClientAssertionType), "context", ctx)
-		return Principal{}, ErrInvalidInput
+		return common.Principal{}, common.ErrInvalidInput
 	}
 
 	headerKid, tokenHasKid, headerAlg, err := parseClientAssertionHeader(clientAssertionInput.ClientAssertion)
 	if err != nil {
 		logx.L().Debug("could not parse client_assertion token header", "context", ctx, "error", err)
-		return Principal{}, ErrInvalidInput
+		return common.Principal{}, common.ErrInvalidInput
 	}
 
 	for _, s := range schemes {
@@ -103,10 +67,10 @@ func (v *ClientAssertionVerifier) Verify(ctx context.Context, in Credentials, sc
 					continue
 				}
 			}
-			return Principal{Subject: SubjectID(claims.Subject)}, nil
+			return common.Principal{Subject: common.SubjectID(claims.Subject)}, nil
 		}
 	}
-	return Principal{}, ErrInvalidCredentials
+	return common.Principal{}, common.ErrInvalidCredentials
 }
 
 func buildClientAssertionParserOptions(scheme ClientAssertionScheme, keyConf ClientAssertionSchemeKey) []jwt.ParserOption {

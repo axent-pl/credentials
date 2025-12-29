@@ -1,8 +1,9 @@
-package credentials
+package samlrequest
 
 import (
 	"crypto"
 
+	"github.com/axent-pl/credentials/common"
 	"github.com/axent-pl/credentials/sig"
 )
 
@@ -15,4 +16,4 @@ type SAMLRequestSchemeKey struct {
 	SigAlg sig.SigAlg
 }
 
-func (SAMLRequestScheme) Kind() Kind { return CredSAMLRequest }
+func (SAMLRequestScheme) Kind() common.Kind { return common.SAMLRequest }

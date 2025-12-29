@@ -1,4 +1,4 @@
-package credentials_test
+package jwt_test
 
 import (
 	"bytes"
@@ -10,7 +10,8 @@ import (
 	"net/url"
 	"testing"
 
-	"github.com/axent-pl/credentials"
+	"github.com/axent-pl/credentials/common"
+	"github.com/axent-pl/credentials/jwt"
 )
 
 var jwksResponsePayload string = `{
@@ -70,21 +71,21 @@ func TestJWKSProvider_ValidationSchemes(t *testing.T) {
 	})
 	tests := []struct {
 		name     string
-		in       credentials.Credentials
-		wantTest func([]credentials.Scheme) error
+		in       common.Credentials
+		wantTest func([]common.Scheme) error
 		wantErr  bool
 	}{
 		{
 			name: "successful execution",
-			in:   credentials.JWTInput{Token: "ttt"},
-			wantTest: func(schemes []credentials.Scheme) error {
+			in:   jwt.JWTInput{Token: "ttt"},
+			wantTest: func(schemes []common.Scheme) error {
 				if len(schemes) < 1 {
 					return errors.New("no schemes")
 				}
 				if len(schemes) != 1 {
 					return fmt.Errorf("want 1 schemes, got %d", len(schemes))
 				}
-				jwtScheme, ok := schemes[0].(credentials.JWTScheme)
+				jwtScheme, ok := schemes[0].(jwt.JWTScheme)
 				if !ok {
 					return errors.New("invalid scheme type, want JWTScheme")
 				}
@@ -98,7 +99,7 @@ func TestJWKSProvider_ValidationSchemes(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			var p credentials.JWKSProvider
+			var p jwt.JWKSProvider
 			p.JWKSURL = url.URL{}
 			got, gotErr := p.ValidationSchemes(context.Background(), tt.in)
 			if gotErr != nil {

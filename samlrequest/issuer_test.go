@@ -1,4 +1,4 @@
-package credentials_test
+package samlrequest_test
 
 import (
 	"context"
@@ -9,7 +9,8 @@ import (
 	"crypto/rsa"
 	"testing"
 
-	"github.com/axent-pl/credentials"
+	"github.com/axent-pl/credentials/common"
+	"github.com/axent-pl/credentials/samlrequest"
 )
 
 func TestSAMLRequestIssuer_Issue(t *testing.T) {
@@ -18,13 +19,13 @@ func TestSAMLRequestIssuer_Issue(t *testing.T) {
 
 	tests := []struct {
 		name        string
-		issueParams credentials.IssueParams
-		want        []credentials.Artifact
+		issueParams common.IssueParams
+		want        []common.Artifact
 		wantErr     bool
 	}{
 		{
 			name: "basic without signature success",
-			issueParams: credentials.SAMLRequestIssueParams{
+			issueParams: samlrequest.SAMLRequestIssueParams{
 				Issuer:      "https://saml.application.org",
 				Destination: "https://saml.idp.org",
 			},
@@ -32,9 +33,9 @@ func TestSAMLRequestIssuer_Issue(t *testing.T) {
 		},
 		{
 			name: "basic with signature (rsa+sha256) success",
-			issueParams: credentials.SAMLRequestIssueParams{
+			issueParams: samlrequest.SAMLRequestIssueParams{
 				Issuer: "https://saml.application.org",
-				Key: &credentials.SAMLRequestIssueKey{
+				Key: &samlrequest.SAMLRequestIssueKey{
 					PrivateKey: rsaKey,
 					HashAlg:    crypto.SHA256,
 				},
@@ -44,9 +45,9 @@ func TestSAMLRequestIssuer_Issue(t *testing.T) {
 		},
 		{
 			name: "basic with signature (ecdsa+sha256) success",
-			issueParams: credentials.SAMLRequestIssueParams{
+			issueParams: samlrequest.SAMLRequestIssueParams{
 				Issuer: "https://saml.application.org",
-				Key: &credentials.SAMLRequestIssueKey{
+				Key: &samlrequest.SAMLRequestIssueKey{
 					PrivateKey: ecdsaKey,
 					HashAlg:    crypto.SHA256,
 				},
@@ -58,8 +59,8 @@ func TestSAMLRequestIssuer_Issue(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// TODO: construct the receiver type.
-			var iss credentials.SAMLRequestIssuer
-			_, gotErr := iss.Issue(context.Background(), credentials.Principal{}, tt.issueParams)
+			var iss samlrequest.SAMLRequestIssuer
+			_, gotErr := iss.Issue(context.Background(), common.Principal{}, tt.issueParams)
 			if gotErr != nil {
 				if !tt.wantErr {
 					t.Errorf("Issue() failed: %v", gotErr)

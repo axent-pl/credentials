@@ -1,4 +1,4 @@
-package credentials
+package samlrequest
 
 import (
 	"context"
@@ -12,6 +12,7 @@ import (
 	"net/url"
 	"time"
 
+	"github.com/axent-pl/credentials/common"
 	"github.com/axent-pl/credentials/logx"
 	"github.com/axent-pl/credentials/sig"
 )
@@ -49,21 +50,21 @@ type SAMLRequestIssueParams struct {
 	IsPassive *bool
 }
 
-func (SAMLRequestIssueParams) Kind() Kind { return CredSAMLRequest }
+func (SAMLRequestIssueParams) Kind() common.Kind { return common.SAMLRequest }
 
 type SAMLRequestIssuer struct {
 }
 
-func (SAMLRequestIssuer) Kind() Kind { return CredSAMLRequest }
+func (SAMLRequestIssuer) Kind() common.Kind { return common.SAMLRequest }
 
-func (iss *SAMLRequestIssuer) Issue(ctx context.Context, _ Principal, issueParams IssueParams) ([]Artifact, error) {
+func (iss *SAMLRequestIssuer) Issue(ctx context.Context, _ common.Principal, issueParams common.IssueParams) ([]common.Artifact, error) {
 	samlIssueParams, ok := issueParams.(SAMLRequestIssueParams)
 	if !ok {
 		logx.L().Debug("could not cast IssueParams to SAMLRequestIssueParams", "context", ctx)
-		return nil, ErrInternal
+		return nil, common.ErrInternal
 	}
 
-	samlRequest := SAMLRequestInput{
+	samlRequest := SAMLRequestCredentials{
 		RelayState: samlIssueParams.RelayState,
 	}
 	samlRequestXML := SAMLRequestXML{
@@ -81,7 +82,7 @@ func (iss *SAMLRequestIssuer) Issue(ctx context.Context, _ Principal, issueParam
 	// marshal SAMLRequestXML
 	if err := samlRequest.MarshalSAMLRequest(samlRequestXML); err != nil {
 		logx.L().Error("could not encode SAMLRequestXML", "context", ctx, "error", err)
-		return nil, ErrInternal
+		return nil, common.ErrInternal
 	}
 	// sign if signature key provided in scheme
 	if samlIssueParams.Key != nil {
@@ -89,14 +90,14 @@ func (iss *SAMLRequestIssuer) Issue(ctx context.Context, _ Principal, issueParam
 		sigAlg, err := SAMLSigAlg(samlIssueParams.Key.PrivateKey, samlIssueParams.Key.HashAlg)
 		if err != nil {
 			logx.L().Error("could not determine SAMLRequest SigAlg", "context", ctx, "error", err)
-			return nil, ErrInternal
+			return nil, common.ErrInternal
 		}
 		// sign
 		samlRequest.SigAlg = sigAlg
 		signature, err := iss.Sign(samlRequest, samlIssueParams.Key)
 		if err != nil {
 			logx.L().Error("could not sign SAMLRequest", "context", ctx, "error", err)
-			return nil, ErrInternal
+			return nil, common.ErrInternal
 		}
 		samlRequest.Signature = signature
 	}
@@ -104,22 +105,22 @@ func (iss *SAMLRequestIssuer) Issue(ctx context.Context, _ Principal, issueParam
 	samlRequestURI, err := iss.buildSAMLRequestURI(samlIssueParams.Destination, samlRequest)
 	if err != nil {
 		logx.L().Error("could not build SAMLRequest URI", "context", ctx, "error", err)
-		return nil, ErrInternal
+		return nil, common.ErrInternal
 	}
 
-	artifacts := make([]Artifact, 0)
+	artifacts := make([]common.Artifact, 0)
 
 	// SAML request URI
-	artifacts = append(artifacts, Artifact{
-		Kind:      ArtifactSAMLRequestURI, // or a custom ArtifactRedirectURL if you define one
-		MediaType: "text/uri-list",        // standard for representing a URI
+	artifacts = append(artifacts, common.Artifact{
+		Kind:      common.ArtifactSAMLRequestURI, // or a custom ArtifactRedirectURL if you define one
+		MediaType: "text/uri-list",               // standard for representing a URI
 		Bytes:     []byte(samlRequestURI),
 	})
 
 	return artifacts, nil
 }
 
-func (iss *SAMLRequestIssuer) Sign(r SAMLRequestInput, key *SAMLRequestIssueKey) (string, error) {
+func (iss *SAMLRequestIssuer) Sign(r SAMLRequestCredentials, key *SAMLRequestIssueKey) (string, error) {
 	_, _ = SAMLSigAlg(key.PrivateKey, key.HashAlg)
 	signedData := r.SignedQuery()
 	digest, _ := sig.Hash(signedData, key.HashAlg)
@@ -145,7 +146,7 @@ func (iss *SAMLRequestIssuer) Sign(r SAMLRequestInput, key *SAMLRequestIssueKey)
 	return base64.StdEncoding.EncodeToString(signature), nil
 }
 
-func (iss *SAMLRequestIssuer) buildSAMLRequestURI(destination string, in SAMLRequestInput) (string, error) {
+func (iss *SAMLRequestIssuer) buildSAMLRequestURI(destination string, in SAMLRequestCredentials) (string, error) {
 	u, err := url.Parse(destination)
 	if err != nil {
 		return "", err

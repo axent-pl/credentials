@@ -1,4 +1,4 @@
-package credentials
+package samlrequest
 
 import (
 	"context"
@@ -6,28 +6,29 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/axent-pl/credentials/common"
 	"github.com/axent-pl/credentials/logx"
 	"github.com/axent-pl/credentials/sig"
 )
 
 type SAMLRequestVerifier struct{}
 
-func (v *SAMLRequestVerifier) Kind() Kind { return CredSAMLRequest }
+func (v *SAMLRequestVerifier) Kind() common.Kind { return common.SAMLRequest }
 
-func (v *SAMLRequestVerifier) Verify(ctx context.Context, in Credentials, schemes []Scheme) (Principal, error) {
-	samlRequestInput, ok := in.(SAMLRequestInput)
+func (v *SAMLRequestVerifier) Verify(ctx context.Context, in common.Credentials, schemes []common.Scheme) (common.Principal, error) {
+	samlRequestInput, ok := in.(SAMLRequestCredentials)
 	if !ok {
 		logx.L().Debug("could not cast Input to SAMLRequestInput", "context", ctx)
-		return Principal{}, ErrInvalidInput
+		return common.Principal{}, common.ErrInvalidInput
 	}
 	if samlRequestInput.SAMLRequest == "" {
 		logx.L().Debug("empty request", "context", ctx)
-		return Principal{}, ErrInvalidInput
+		return common.Principal{}, common.ErrInvalidInput
 	}
 	samlRequestXML, err := samlRequestInput.UnmarshalSAMLRequest()
 	if err != nil {
 		logx.L().Debug("could not parse SAML request", "context", ctx, "error", err)
-		return Principal{}, ErrInvalidInput
+		return common.Principal{}, common.ErrInvalidInput
 	}
 
 	for _, s := range schemes {
@@ -41,13 +42,13 @@ func (v *SAMLRequestVerifier) Verify(ctx context.Context, in Credentials, scheme
 		if samlRequestXML.Issuer.Value == "" {
 			continue
 		}
-		return Principal{Subject: SubjectID(samlRequestXML.Issuer.Value)}, nil
+		return common.Principal{Subject: common.SubjectID(samlRequestXML.Issuer.Value)}, nil
 	}
 
-	return Principal{}, ErrInvalidCredentials
+	return common.Principal{}, common.ErrInvalidCredentials
 }
 
-func (v *SAMLRequestVerifier) VerifySignature(r SAMLRequestInput, s SAMLRequestScheme) error {
+func (v *SAMLRequestVerifier) VerifySignature(r SAMLRequestCredentials, s SAMLRequestScheme) error {
 	// no keys in scheme => no signature verification
 	if len(s.Keys) == 0 {
 		return nil

@@ -1,4 +1,4 @@
-package credentials_test
+package jwt_test
 
 import (
 	"context"
@@ -7,47 +7,48 @@ import (
 	"testing"
 	"time"
 
-	"github.com/axent-pl/credentials"
+	"github.com/axent-pl/credentials/common"
+	"github.com/axent-pl/credentials/jwt"
 	"github.com/axent-pl/credentials/sig"
 )
 
 func TestJWTVerifier_Verify(t *testing.T) {
 	rsaKey, _ := rsa.GenerateKey(rand.Reader, 2048)
-	issueParams := credentials.JWTIssueParams{
+	issueParams := jwt.JWTIssueParams{
 		Issuer: "acme-issuer",
 		Exp:    20 * time.Second,
-		Key: credentials.JWTIssueKey{
+		Key: jwt.JWTIssueKey{
 			PrivateKey: rsaKey,
 			Alg:        sig.SigAlgRS256,
 		},
 	}
-	var issuer credentials.JWTIssuer
-	artifacts, _ := issuer.Issue(context.Background(), credentials.Principal{Subject: "subject-id"}, issueParams)
-	accessToken, _ := credentials.ArtifactWithKind(artifacts, credentials.ArtifactAccessToken)
+	var issuer jwt.JWTIssuer
+	artifacts, _ := issuer.Issue(context.Background(), common.Principal{Subject: "subject-id"}, issueParams)
+	accessToken, _ := common.ArtifactWithKind(artifacts, common.ArtifactAccessToken)
 
 	tests := []struct {
 		name string // description of this test case
 		// Named input parameters for target function.
-		in      credentials.Credentials
-		schemes []credentials.Scheme
-		want    credentials.Principal
+		in      common.Credentials
+		schemes []common.Scheme
+		want    common.Principal
 		wantErr bool
 	}{
 		{
 			name: "valid RSA",
-			in: credentials.JWTInput{
+			in: jwt.JWTInput{
 				Token: string(accessToken.Bytes),
 			},
-			schemes: []credentials.Scheme{
-				credentials.JWTScheme{
-					Keys: []credentials.JWTSchemeKey{
+			schemes: []common.Scheme{
+				jwt.JWTScheme{
+					Keys: []jwt.JWTSchemeKey{
 						{
 							Key: &rsaKey.PublicKey,
 						},
 					},
 				},
 			},
-			want: credentials.Principal{
+			want: common.Principal{
 				Subject: "subject-id",
 			},
 			wantErr: false,
@@ -56,7 +57,7 @@ func TestJWTVerifier_Verify(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// TODO: construct the receiver type.
-			var v credentials.JWTVerifier
+			var v jwt.JWTVerifier
 			got, gotErr := v.Verify(context.Background(), tt.in, tt.schemes)
 			if gotErr != nil {
 				if !tt.wantErr {
