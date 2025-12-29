@@ -1,0 +1,70 @@
+Results:
+
+Golang errors in file: [.]:
+
+  > [line 0 : column 0] - loading files from package ".": err: exit status 1: stderr: go: go.mod requires go >= 1.25.5 (running go 1.25.0; GOTOOLCHAIN=local)
+
+
+
+Golang errors in file: [clientassertion]:
+
+  > [line 0 : column 0] - loading files from package "clientassertion": err: exit status 1: stderr: go: go.mod requires go >= 1.25.5 (running go 1.25.0; GOTOOLCHAIN=local)
+
+
+
+Golang errors in file: [clientsecret]:
+
+  > [line 0 : column 0] - loading files from package "clientsecret": err: exit status 1: stderr: go: go.mod requires go >= 1.25.5 (running go 1.25.0; GOTOOLCHAIN=local)
+
+
+
+Golang errors in file: [common]:
+
+  > [line 0 : column 0] - loading files from package "common": err: exit status 1: stderr: go: go.mod requires go >= 1.25.5 (running go 1.25.0; GOTOOLCHAIN=local)
+
+
+
+Golang errors in file: [jwt]:
+
+  > [line 0 : column 0] - loading files from package "jwt": err: exit status 1: stderr: go: go.mod requires go >= 1.25.5 (running go 1.25.0; GOTOOLCHAIN=local)
+
+
+
+Golang errors in file: [logx]:
+
+  > [line 0 : column 0] - loading files from package "logx": err: exit status 1: stderr: go: go.mod requires go >= 1.25.5 (running go 1.25.0; GOTOOLCHAIN=local)
+
+
+
+Golang errors in file: [mapx]:
+
+  > [line 0 : column 0] - loading files from package "mapx": err: exit status 1: stderr: go: go.mod requires go >= 1.25.5 (running go 1.25.0; GOTOOLCHAIN=local)
+
+
+
+Golang errors in file: [samlrequest]:
+
+  > [line 0 : column 0] - loading files from package "samlrequest": err: exit status 1: stderr: go: go.mod requires go >= 1.25.5 (running go 1.25.0; GOTOOLCHAIN=local)
+
+
+
+Golang errors in file: [sig]:
+
+  > [line 0 : column 0] - loading files from package "sig": err: exit status 1: stderr: go: go.mod requires go >= 1.25.5 (running go 1.25.0; GOTOOLCHAIN=local)
+
+
+
+Golang errors in file: [userpassword]:
+
+  > [line 0 : column 0] - loading files from package "userpassword": err: exit status 1: stderr: go: go.mod requires go >= 1.25.5 (running go 1.25.0; GOTOOLCHAIN=local)
+
+
+
+
+Summary:
+  Gosec  : dev
+  Files  : 0
+  Lines  : 0
+  Nosec  : 0
+  Issues : 0
+

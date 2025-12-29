@@ -3,6 +3,8 @@ package jwt
 import (
 	"context"
 	"crypto"
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"maps"
@@ -179,13 +181,35 @@ func (iss *JWTIssuer) PatchedClaims(ctx context.Context, principal common.Princi
 }
 
 func (iss *JWTIssuer) BaseClaims(ctx context.Context, principal common.Principal, issueParams JWTIssueParams) (map[string]any, error) {
+	now := time.Now()
+
+	if issueParams.Exp <= 0 {
+		return nil, fmt.Errorf("exp must be > 0")
+	}
+
+	jti, err := newJTI(16)
+	if err != nil {
+		return nil, fmt.Errorf("could not generate jti: %w", err)
+	}
+
 	claims := make(map[string]any)
 	claims["sub"] = string(principal.Subject)
 	claims["iss"] = issueParams.Issuer
-	claims["exp"] = time.Now().Add(issueParams.Exp).Unix()
-	claims["iat"] = time.Now().Unix()
+	claims["exp"] = now.Add(issueParams.Exp).Unix()
+	claims["iat"] = now.Unix()
+	claims["jti"] = jti
+
 	if issueParams.AuthorizedParty != "" {
 		claims["azp"] = string(issueParams.AuthorizedParty)
 	}
+
 	return claims, nil
+}
+
+func newJTI(nbytes int) (string, error) {
+	b := make([]byte, nbytes)
+	if _, err := rand.Read(b); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(b), nil
 }

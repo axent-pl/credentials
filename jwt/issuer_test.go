@@ -100,7 +100,7 @@ func TestJWTIssuer_BaseClaims(t *testing.T) {
 				CheckClaimNotNil("exp"),
 				CheckClaimNotNil("iat"),
 			},
-			wantErr: false,
+			wantErr: true,
 		},
 		{
 			name:        "no azp",

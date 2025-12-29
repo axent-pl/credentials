@@ -5,10 +5,12 @@ import "fmt"
 type ArtifactKind string
 
 const (
-	ArtifactUnknown      ArtifactKind = ""
-	ArtifactAccessToken  ArtifactKind = "access_token"
-	ArtifactRefreshToken ArtifactKind = "refresh_token"
-	ArtifactIdToken      ArtifactKind = "id_token"
+	ArtifactUnknown             ArtifactKind = ""
+	ArtifactAccessToken         ArtifactKind = "access_token"
+	ArtifactRefreshToken        ArtifactKind = "refresh_token"
+	ArtifactIdToken             ArtifactKind = "id_token"
+	ArtifactClientAssertion     ArtifactKind = "client_assertion"
+	ArtifactClientAssertionType ArtifactKind = "client_assertion_type"
 	// #nosec G101
 	ArtifactOAuth2TokenResponse ArtifactKind = "oauth2_token_response"
 	ArtifactSAMLRequestURI      ArtifactKind = "saml_request_uri"
