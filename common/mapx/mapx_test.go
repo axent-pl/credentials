@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/axent-pl/credentials/mapx"
+	"github.com/axent-pl/credentials/common/mapx"
 )
 
 func TestGet(t *testing.T) {

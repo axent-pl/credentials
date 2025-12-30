@@ -18,7 +18,7 @@ import (
 	"time"
 
 	"github.com/axent-pl/credentials/common"
-	"github.com/axent-pl/credentials/sig"
+	"github.com/axent-pl/credentials/common/sig"
 )
 
 type JWKSProvider struct {

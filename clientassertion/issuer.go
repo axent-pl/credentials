@@ -10,8 +10,8 @@ import (
 	"time"
 
 	"github.com/axent-pl/credentials/common"
-	"github.com/axent-pl/credentials/logx"
-	"github.com/axent-pl/credentials/sig"
+	"github.com/axent-pl/credentials/common/logx"
+	"github.com/axent-pl/credentials/common/sig"
 	jwtx "github.com/golang-jwt/jwt/v5"
 )
 

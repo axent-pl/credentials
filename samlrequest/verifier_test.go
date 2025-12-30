@@ -9,8 +9,8 @@ import (
 	"testing"
 
 	"github.com/axent-pl/credentials/common"
+	"github.com/axent-pl/credentials/common/sig"
 	"github.com/axent-pl/credentials/samlrequest"
-	"github.com/axent-pl/credentials/sig"
 )
 
 func TestSAMLRequestVerifier_Verify(t *testing.T) {

@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/axent-pl/credentials/clientassertion"
-	"github.com/axent-pl/credentials/sig"
+	"github.com/axent-pl/credentials/common/sig"
 )
 
 func TestClientAssertionIssuer_Sign(t *testing.T) {
