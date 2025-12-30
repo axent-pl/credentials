@@ -2,10 +2,12 @@ package clientassertion
 
 import "github.com/axent-pl/credentials/common"
 
-type ClientAssertionInput struct {
+type ClientAssertionCredentials struct {
 	ClientId            string
 	ClientAssertionType string
 	ClientAssertion     string
 }
 
-func (ClientAssertionInput) Kind() common.Kind { return common.ClientAssertion }
+func (ClientAssertionCredentials) Kind() common.Kind { return common.ClientAssertion }
+
+var _ common.Credentials = ClientAssertionCredentials{}

@@ -40,11 +40,11 @@ type ClientAssertionIssueParams struct {
 	OverlayClaims map[string]any
 }
 
-// Adjust this if your common.Kind uses a different constant/name.
 func (ClientAssertionIssueParams) Kind() common.Kind { return common.ClientAssertion }
 
-// issuer
 type ClientAssertionIssuer struct{}
+
+var _ common.Issuer = &ClientAssertionIssuer{}
 
 func (ClientAssertionIssuer) Kind() common.Kind { return common.ClientAssertion }
 

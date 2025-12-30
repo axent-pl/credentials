@@ -40,9 +40,9 @@ type JWTIssueParams struct {
 
 func (JWTIssueParams) Kind() common.Kind { return common.JWT }
 
-// issuer
-type JWTIssuer struct {
-}
+type JWTIssuer struct{}
+
+var _ common.Issuer = &JWTIssuer{}
 
 func (JWTIssuer) Kind() common.Kind { return common.JWT }
 

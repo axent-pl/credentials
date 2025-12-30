@@ -13,6 +13,8 @@ import (
 
 type SAMLRequestVerifier struct{}
 
+var _ common.Verifier = &SAMLRequestVerifier{}
+
 func (v *SAMLRequestVerifier) Kind() common.Kind { return common.SAMLRequest }
 
 func (v *SAMLRequestVerifier) Verify(ctx context.Context, in common.Credentials, schemes []common.Scheme) (common.Principal, error) {

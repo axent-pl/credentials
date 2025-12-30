@@ -10,6 +10,8 @@ import (
 
 type ClientSecretVerifier struct{}
 
+var _ common.Verifier = &ClientSecretVerifier{}
+
 func (v *ClientSecretVerifier) Kind() common.Kind { return common.ClientSecret }
 
 func (v *ClientSecretVerifier) Verify(ctx context.Context, in common.Credentials, stored []common.Scheme) (common.Principal, error) {

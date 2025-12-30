@@ -16,10 +16,12 @@ const URNClientAssertionType = "urn:ietf:params:oauth:client-assertion-type:jwt-
 
 type ClientAssertionVerifier struct{}
 
+var _ common.Verifier = &ClientAssertionVerifier{}
+
 func (v *ClientAssertionVerifier) Kind() common.Kind { return common.ClientAssertion }
 
 func (v *ClientAssertionVerifier) Verify(ctx context.Context, in common.Credentials, schemes []common.Scheme) (common.Principal, error) {
-	clientAssertionInput, ok := in.(ClientAssertionInput)
+	clientAssertionInput, ok := in.(ClientAssertionCredentials)
 	if !ok {
 		logx.L().Debug("could not cast InputCredentials to ClientAssertionInput", "context", ctx)
 		return common.Principal{}, common.ErrInvalidInput

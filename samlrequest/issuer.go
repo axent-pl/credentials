@@ -52,8 +52,9 @@ type SAMLRequestIssueParams struct {
 
 func (SAMLRequestIssueParams) Kind() common.Kind { return common.SAMLRequest }
 
-type SAMLRequestIssuer struct {
-}
+type SAMLRequestIssuer struct{}
+
+var _ common.Issuer = &SAMLRequestIssuer{}
 
 func (SAMLRequestIssuer) Kind() common.Kind { return common.SAMLRequest }
 

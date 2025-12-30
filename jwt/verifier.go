@@ -13,6 +13,8 @@ import (
 
 type JWTVerifier struct{}
 
+var _ common.Verifier = &JWTVerifier{}
+
 func (v *JWTVerifier) Kind() common.Kind { return common.JWT }
 
 func (v *JWTVerifier) Verify(ctx context.Context, in common.Credentials, schemes []common.Scheme) (common.Principal, error) {
