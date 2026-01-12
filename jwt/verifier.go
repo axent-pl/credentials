@@ -12,6 +12,7 @@ import (
 	jwtx "github.com/golang-jwt/jwt/v5"
 )
 
+// JWTVerifier validates JWT-based credentials using configured schemes.
 type JWTVerifier struct{}
 
 var _ common.Verifier = &JWTVerifier{}
@@ -54,7 +55,7 @@ func (v *JWTVerifier) verify(ctx context.Context, c JWTCredentials, header jwtCr
 		logx.L().Debug("invalid key alg", "context", ctx)
 		return common.Principal{}, fmt.Errorf("%v: invalid key", common.ErrInvalidCredentials)
 	}
-	if key.Alg != headerAlg {
+	if key.Alg != sig.SigAlgUnknown && key.Alg != headerAlg {
 		logx.L().Debug("invalid key alg", "context", ctx)
 		return common.Principal{}, fmt.Errorf("%v: invalid key alg", common.ErrInvalidCredentials)
 	}
@@ -115,6 +116,7 @@ func (v *JWTVerifier) parseInput(ctx context.Context, in common.Credentials) (JW
 	return jwtInput, header, nil
 }
 
+// Verify validates input against a single scheme.
 func (v *JWTVerifier) Verify(ctx context.Context, in common.Credentials, s common.Scheme) (common.Principal, error) {
 	scheme, err := v.parseScheme(ctx, s)
 	if err != nil {
@@ -129,6 +131,7 @@ func (v *JWTVerifier) Verify(ctx context.Context, in common.Credentials, s commo
 	return v.verify(ctx, jwtInput, header, scheme)
 }
 
+// VerifyAny validates input against the first matching scheme.
 func (v *JWTVerifier) VerifyAny(ctx context.Context, in common.Credentials, schemes []common.Scheme) (common.Principal, error) {
 	jwtInput, header, err := v.parseInput(ctx, in)
 	if err != nil {
@@ -136,40 +139,21 @@ func (v *JWTVerifier) VerifyAny(ctx context.Context, in common.Credentials, sche
 	}
 
 	for _, s := range schemes {
-		conf, ok := s.(JWTScheme)
-		// not a JWTScheme or no keys in JWTScheme
-		if !ok || len(conf.Keys) == 0 {
+		scheme, err := v.parseScheme(ctx, s)
+		if err != nil {
 			continue
 		}
-		// scheme requires "kid" which is not present
-		if conf.MustMatchKid && !header.hasKid {
+		principal, err := v.verify(ctx, jwtInput, header, scheme)
+		if err != nil {
 			continue
 		}
-
-		// Verify with the key(s)
-		for _, keyConfig := range conf.Keys {
-			if conf.MustMatchKid && header.kid != keyConfig.Kid {
-				continue
-			}
-			if alg, err := keyConfig.Alg.ToOAuth(); err == nil && alg != header.alg {
-				continue
-			}
-			opts := v.buildParserOptions(conf, keyConfig)
-			claims, err := parseJWT(jwtInput.Token, keyConfig.Key, opts)
-			if err != nil {
-				continue
-			}
-			if claims.Subject == "" {
-				continue
-			}
-			return common.Principal{Subject: common.SubjectID(claims.Subject)}, nil
-		}
+		return principal, nil
 	}
 
 	return common.Principal{}, common.ErrInvalidCredentials
 }
 
-// Build parser options
+// Build parser options for JWT validation.
 func (v *JWTVerifier) buildParserOptions(scheme JWTScheme, keyConf sig.SignatureKey) []jwtx.ParserOption {
 	var opts []jwtx.ParserOption
 	if scheme.Subject != "" {
@@ -184,8 +168,11 @@ func (v *JWTVerifier) buildParserOptions(scheme JWTScheme, keyConf sig.Signature
 	if scheme.Audience != "" {
 		opts = append(opts, jwtx.WithAudience(scheme.Audience))
 	}
-	if alg, err := keyConf.Alg.ToOAuth(); err == nil {
-		opts = append(opts, jwtx.WithValidMethods([]string{alg}))
+	if keyConf.Alg != sig.SigAlgUnknown {
+		alg, err := keyConf.Alg.ToOAuth()
+		if err == nil {
+			opts = append(opts, jwtx.WithValidMethods([]string{alg}))
+		}
 	}
 	return opts
 }
