@@ -27,25 +27,18 @@ type clientAssertionCredentialsHeader struct {
 	alg    string
 }
 
-func (v *ClientAssertionVerifier) verify(ctx context.Context, c ClientAssertionCredentials, h clientAssertionCredentialsHeader, scheme ClientAssertionScheme) (common.Principal, error) {
-	if len(scheme.Keys) == 0 {
+func (v *ClientAssertionVerifier) verify(ctx context.Context, c ClientAssertionCredentials, h clientAssertionCredentialsHeader, scheme ClientAssertionSchemer) (common.Principal, error) {
+	if len(scheme.GetKeys()) == 0 {
 		logx.L().Debug("missing Keys in ClientAssertionScheme", "context", ctx)
 		return common.Principal{}, fmt.Errorf("%v: missing keys in scheme", common.ErrInternal)
 	}
-	if scheme.MustMatchKid && !h.hasKid {
+	if scheme.GetMustMatchKid() && !h.hasKid {
 		logx.L().Debug("missing `kid`", "context", ctx)
 		return common.Principal{}, fmt.Errorf("%v: missing `kid`", common.ErrInvalidCredentials)
 	}
 
 	// find key
-	var key *sig.SignatureVerificationKey
-	var keyFound bool = false
-	if !h.hasKid && len(scheme.Keys) == 1 {
-		key = &scheme.Keys[0]
-		keyFound = true
-	} else {
-		key, keyFound = scheme.findKeyByKid(h.kid)
-	}
+	key, keyFound := sig.FindSignatureVerificationKey(scheme.GetKeys(), h.kid)
 
 	if !keyFound {
 		logx.L().Debug("invalid key", "context", ctx)
@@ -76,8 +69,8 @@ func (v *ClientAssertionVerifier) verify(ctx context.Context, c ClientAssertionC
 	}
 
 	// replay
-	if scheme.Replay != nil && claims.ID != "" && claims.ExpiresAt != nil {
-		if scheme.Replay.Seen(ctx, claims.ID, claims.ExpiresAt.Time) {
+	if scheme.GetReplay() != nil && claims.ID != "" && claims.ExpiresAt != nil {
+		if scheme.GetReplay().Seen(ctx, claims.ID, claims.ExpiresAt.Time) {
 			logx.L().Debug("already seen", "context", ctx)
 			return common.Principal{}, fmt.Errorf("%v: already seen", common.ErrInvalidCredentials)
 		}
@@ -87,9 +80,9 @@ func (v *ClientAssertionVerifier) verify(ctx context.Context, c ClientAssertionC
 }
 
 func (v *ClientAssertionVerifier) Verify(ctx context.Context, in common.Credentials, s common.Scheme) (common.Principal, error) {
-	scheme, ok := s.(ClientAssertionScheme)
+	scheme, ok := s.(ClientAssertionSchemer)
 	if !ok {
-		logx.L().Debug("could not cast scheme to ClientAssertionScheme", "context", ctx)
+		logx.L().Debug("could not cast scheme to ClientAssertionSchemer", "context", ctx)
 		return common.Principal{}, fmt.Errorf("%v: invalid scheme", common.ErrInternal)
 	}
 
@@ -148,8 +141,8 @@ func (v *ClientAssertionVerifier) VerifyAny(ctx context.Context, in common.Crede
 	}
 
 	for _, s := range schemes {
-		scheme, ok := s.(ClientAssertionScheme)
-		if !ok || len(scheme.Keys) == 0 {
+		scheme, ok := s.(ClientAssertionSchemer)
+		if !ok || len(scheme.GetKeys()) == 0 {
 			continue
 		}
 		principal, err := v.verify(ctx, clientAssertionInput, header, scheme)
@@ -161,19 +154,19 @@ func (v *ClientAssertionVerifier) VerifyAny(ctx context.Context, in common.Crede
 	return common.Principal{}, common.ErrInvalidCredentials
 }
 
-func buildClientAssertionParserOptions(scheme ClientAssertionScheme, keyConf sig.SignatureVerificationKey) []jwt.ParserOption {
+func buildClientAssertionParserOptions(scheme ClientAssertionSchemer, keyConf sig.SignatureVerificationKey) []jwt.ParserOption {
 	var opts []jwt.ParserOption
-	if scheme.Subject != "" {
-		opts = append(opts, jwt.WithSubject(string(scheme.Subject)))
+	if scheme.GetSubject() != "" {
+		opts = append(opts, jwt.WithSubject(string(scheme.GetSubject())))
 	}
-	if scheme.Leeway > 0 {
-		opts = append(opts, jwt.WithLeeway(scheme.Leeway))
+	if scheme.GetLeeway() > 0 {
+		opts = append(opts, jwt.WithLeeway(scheme.GetLeeway()))
 	}
-	if scheme.Issuer != "" {
-		opts = append(opts, jwt.WithIssuer(scheme.Issuer))
+	if scheme.GetIssuer() != "" {
+		opts = append(opts, jwt.WithIssuer(scheme.GetIssuer()))
 	}
-	if scheme.Audience != "" {
-		opts = append(opts, jwt.WithAudience(scheme.Audience))
+	if scheme.GetAudience() != "" {
+		opts = append(opts, jwt.WithAudience(scheme.GetAudience()))
 	}
 	if alg, err := keyConf.Alg.ToOAuth(); err == nil {
 		opts = append(opts, jwt.WithValidMethods([]string{alg}))

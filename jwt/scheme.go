@@ -25,11 +25,16 @@ type JWTScheme struct {
 
 func (JWTScheme) Kind() common.Kind { return common.JWT }
 
-func (s *JWTScheme) findKeyByKid(kid string) (*sig.SignatureVerificationKey, bool) {
-	for i := range s.Keys {
-		if s.Keys[i].Kid == kid {
-			return &s.Keys[i], true
-		}
-	}
-	return nil, false
-}
+func (s JWTScheme) GetSubject() common.SubjectID { return s.Subject }
+
+func (s JWTScheme) GetMustMatchKid() bool { return s.MustMatchKid }
+
+func (s JWTScheme) GetKeys() []sig.SignatureVerificationKey { return s.Keys }
+
+func (s JWTScheme) GetIssuer() string { return s.Issuer }
+
+func (s JWTScheme) GetAudience() string { return s.Audience }
+
+func (s JWTScheme) GetLeeway() time.Duration { return s.Leeway }
+
+func (s JWTScheme) GetReplay() common.ReplayChecker { return s.Replay }

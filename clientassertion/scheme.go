@@ -7,7 +7,18 @@ import (
 	"github.com/axent-pl/credentials/common/sig"
 )
 
-type ClientAssertionScheme struct {
+type ClientAssertionSchemer interface {
+	Kind() common.Kind
+	GetSubject() common.SubjectID
+	GetMustMatchKid() bool
+	GetKeys() []sig.SignatureVerificationKey
+	GetIssuer() string
+	GetAudience() string
+	GetLeeway() time.Duration
+	GetReplay() common.ReplayChecker
+}
+
+type DefaultClientAssertionScheme struct {
 	// Should be present,
 	// assertions are usually self signed
 	// and attacker could take over application X
@@ -27,13 +38,18 @@ type ClientAssertionScheme struct {
 	Replay   common.ReplayChecker
 }
 
-func (ClientAssertionScheme) Kind() common.Kind { return common.ClientAssertion }
+func (DefaultClientAssertionScheme) Kind() common.Kind { return common.ClientAssertion }
 
-func (s *ClientAssertionScheme) findKeyByKid(kid string) (*sig.SignatureVerificationKey, bool) {
-	for i := range s.Keys {
-		if s.Keys[i].Kid == kid {
-			return &s.Keys[i], true
-		}
-	}
-	return nil, false
-}
+func (s DefaultClientAssertionScheme) GetSubject() common.SubjectID { return s.Subject }
+
+func (s DefaultClientAssertionScheme) GetMustMatchKid() bool { return s.MustMatchKid }
+
+func (s DefaultClientAssertionScheme) GetKeys() []sig.SignatureVerificationKey { return s.Keys }
+
+func (s DefaultClientAssertionScheme) GetIssuer() string { return s.Issuer }
+
+func (s DefaultClientAssertionScheme) GetAudience() string { return s.Audience }
+
+func (s DefaultClientAssertionScheme) GetLeeway() time.Duration { return s.Leeway }
+
+func (s DefaultClientAssertionScheme) GetReplay() common.ReplayChecker { return s.Replay }

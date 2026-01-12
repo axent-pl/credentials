@@ -37,14 +37,7 @@ func (v *JWTVerifier) verify(ctx context.Context, c JWTCredentials, header jwtCr
 	}
 
 	// find key
-	var key *sig.SignatureVerificationKey
-	var keyFound bool = false
-	if !header.hasKid && len(scheme.Keys) == 1 {
-		key = &scheme.Keys[0]
-		keyFound = true
-	} else {
-		key, keyFound = scheme.findKeyByKid(header.kid)
-	}
+	key, keyFound := sig.FindSignatureVerificationKey(scheme.Keys, header.kid)
 
 	if !keyFound {
 		logx.L().Debug("invalid key", "context", ctx)
