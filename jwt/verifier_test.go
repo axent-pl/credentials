@@ -41,7 +41,7 @@ func TestJWTVerifier_Verify(t *testing.T) {
 			},
 			schemes: []common.Scheme{
 				jwt.JWTScheme{
-					Keys: []jwt.JWTSchemeKey{
+					Keys: []sig.SignatureKey{
 						{
 							Key: &rsaKey.PublicKey,
 						},
@@ -56,7 +56,6 @@ func TestJWTVerifier_Verify(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// TODO: construct the receiver type.
 			var v jwt.JWTVerifier
 			got, gotErr := v.VerifyAny(context.Background(), tt.in, tt.schemes)
 			if gotErr != nil {

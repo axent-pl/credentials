@@ -48,10 +48,10 @@ func TestSAMLRequestVerifier_Verify(t *testing.T) {
 			in:   samlRequest,
 			schemes: []common.Scheme{
 				samlrequest.SAMLRequestScheme{
-					Keys: []samlrequest.SAMLRequestSchemeKey{
+					Keys: []sig.SignatureKey{
 						{
-							Key:    rsaKey.PublicKey,
-							SigAlg: sig.SigAlgRS256,
+							Key: rsaKey.PublicKey,
+							Alg: sig.SigAlgRS256,
 						},
 					},
 				},

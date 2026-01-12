@@ -8,6 +8,7 @@ import (
 
 	"github.com/axent-pl/credentials/common"
 	"github.com/axent-pl/credentials/common/logx"
+	"github.com/axent-pl/credentials/common/sig"
 	"github.com/golang-jwt/jwt/v5"
 )
 
@@ -37,7 +38,7 @@ func (v *ClientAssertionVerifier) verify(ctx context.Context, c ClientAssertionC
 	}
 
 	// find key
-	var key *ClientAssertionSchemeKey
+	var key *sig.SignatureKey
 	var keyFound bool = false
 	if !h.hasKid && len(scheme.Keys) == 1 {
 		key = &scheme.Keys[0]
@@ -48,16 +49,21 @@ func (v *ClientAssertionVerifier) verify(ctx context.Context, c ClientAssertionC
 		logx.L().Debug("invalid key", "context", ctx)
 		return common.Principal{}, fmt.Errorf("%v: invalid key", common.ErrInvalidCredentials)
 	}
+	headerAlg, err := sig.FromSAML(h.alg)
+	if err != nil {
+		logx.L().Debug("invalid key alg", "context", ctx)
+		return common.Principal{}, fmt.Errorf("%v: invalid key", common.ErrInvalidCredentials)
+	}
 
 	// check key alg
-	if key.Alg != "" && key.Alg != h.alg {
+	if key.Alg != headerAlg {
 		logx.L().Debug("invalid key alg", "context", ctx)
 		return common.Principal{}, fmt.Errorf("%v: invalid key alg", common.ErrInvalidCredentials)
 	}
 
 	// parse assertion
 	opts := buildClientAssertionParserOptions(scheme, *key)
-	claims, err := parseClientAssertion(c.ClientAssertion, key.PublicKey, opts)
+	claims, err := parseClientAssertion(c.ClientAssertion, key.Key, opts)
 	if err != nil {
 		logx.L().Debug("could not parse ClientAssertion", "context", ctx, "error", err)
 		return common.Principal{}, fmt.Errorf("%v: %v", common.ErrInvalidCredentials, err)
@@ -153,7 +159,7 @@ func (v *ClientAssertionVerifier) VerifyAny(ctx context.Context, in common.Crede
 	return common.Principal{}, common.ErrInvalidCredentials
 }
 
-func buildClientAssertionParserOptions(scheme ClientAssertionScheme, keyConf ClientAssertionSchemeKey) []jwt.ParserOption {
+func buildClientAssertionParserOptions(scheme ClientAssertionScheme, keyConf sig.SignatureKey) []jwt.ParserOption {
 	var opts []jwt.ParserOption
 	if scheme.Subject != "" {
 		opts = append(opts, jwt.WithSubject(string(scheme.Subject)))
@@ -167,8 +173,8 @@ func buildClientAssertionParserOptions(scheme ClientAssertionScheme, keyConf Cli
 	if scheme.Audience != "" {
 		opts = append(opts, jwt.WithAudience(scheme.Audience))
 	}
-	if keyConf.Alg != "" {
-		opts = append(opts, jwt.WithValidMethods([]string{keyConf.Alg}))
+	if alg, err := keyConf.Alg.ToOAuth(); err == nil {
+		opts = append(opts, jwt.WithValidMethods([]string{alg}))
 	}
 	return opts
 }

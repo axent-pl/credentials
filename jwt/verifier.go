@@ -8,6 +8,7 @@ import (
 
 	"github.com/axent-pl/credentials/common"
 	"github.com/axent-pl/credentials/common/logx"
+	"github.com/axent-pl/credentials/common/sig"
 	jwtx "github.com/golang-jwt/jwt/v5"
 )
 
@@ -47,7 +48,7 @@ func (v *JWTVerifier) VerifyAny(ctx context.Context, in common.Credentials, sche
 
 		// Verify with the key(s)
 		for _, keyConfig := range conf.Keys {
-			if conf.MustMatchKid && headerKid != keyConfig.ID {
+			if conf.MustMatchKid && headerKid != keyConfig.Kid {
 				continue
 			}
 			if alg, err := keyConfig.Alg.ToOAuth(); err == nil && alg != headerAlg {
@@ -69,7 +70,7 @@ func (v *JWTVerifier) VerifyAny(ctx context.Context, in common.Credentials, sche
 }
 
 // Build parser options
-func (v *JWTVerifier) buildParserOptions(scheme JWTScheme, keyConf JWTSchemeKey) []jwtx.ParserOption {
+func (v *JWTVerifier) buildParserOptions(scheme JWTScheme, keyConf sig.SignatureKey) []jwtx.ParserOption {
 	var opts []jwtx.ParserOption
 	if scheme.Subject != "" {
 		opts = append(opts, jwtx.WithSubject(string(scheme.Subject)))

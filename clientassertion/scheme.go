@@ -1,10 +1,10 @@
 package clientassertion
 
 import (
-	"crypto"
 	"time"
 
 	"github.com/axent-pl/credentials/common"
+	"github.com/axent-pl/credentials/common/sig"
 )
 
 type ClientAssertionScheme struct {
@@ -14,7 +14,7 @@ type ClientAssertionScheme struct {
 	// and issue assertion with sub=Y
 	Subject      common.SubjectID
 	MustMatchKid bool
-	Keys         []ClientAssertionSchemeKey
+	Keys         []sig.SignatureKey
 	// It should be present,
 	// for self signed assertion its value will be the same as "sub"
 	Issuer string
@@ -27,15 +27,9 @@ type ClientAssertionScheme struct {
 	Replay   common.ReplayChecker
 }
 
-type ClientAssertionSchemeKey struct {
-	Kid       string
-	PublicKey crypto.PublicKey
-	Alg       string
-}
-
 func (ClientAssertionScheme) Kind() common.Kind { return common.ClientAssertion }
 
-func (s *ClientAssertionScheme) findKeyByKid(kid string) (*ClientAssertionSchemeKey, bool) {
+func (s *ClientAssertionScheme) findKeyByKid(kid string) (*sig.SignatureKey, bool) {
 	for i := range s.Keys {
 		if s.Keys[i].Kid == kid {
 			return &s.Keys[i], true

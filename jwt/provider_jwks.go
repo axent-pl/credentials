@@ -261,7 +261,7 @@ func (p *JWKSProvider) refresh(ctx context.Context) error {
 		return err
 	}
 
-	keys := make([]JWTSchemeKey, 0, len(doc.Keys))
+	keys := make([]sig.SignatureKey, 0, len(doc.Keys))
 	allHaveKID := true
 	for _, jk := range doc.Keys {
 		pub, err := JwkToPublicKey(jk)
@@ -277,8 +277,8 @@ func (p *JWKSProvider) refresh(ctx context.Context) error {
 		}
 		alg, _ := sig.FromOAuth(jk.Alg)
 
-		keys = append(keys, JWTSchemeKey{
-			ID:  jk.Kid,
+		keys = append(keys, sig.SignatureKey{
+			Kid: jk.Kid,
 			Key: pub,
 			Alg: alg,
 		})

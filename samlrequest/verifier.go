@@ -89,11 +89,11 @@ func (v *SAMLRequestVerifier) VerifySignature(r SAMLRequestCredentials, s SAMLRe
 
 	for _, k := range s.Keys {
 		// only consider keys that declare the same SigAlg
-		if k.SigAlg != sigAlg {
+		if k.Alg != sigAlg {
 			continue
 		}
 
-		if err := sig.Verify(signature, digest, k.Key, k.SigAlg); err == nil {
+		if err := sig.Verify(signature, digest, k.Key, k.Alg); err == nil {
 			return nil
 		}
 	}
