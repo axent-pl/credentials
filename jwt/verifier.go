@@ -18,21 +18,113 @@ var _ common.Verifier = &JWTVerifier{}
 
 func (v *JWTVerifier) Kind() common.Kind { return common.JWT }
 
-func (v *JWTVerifier) VerifyAny(ctx context.Context, in common.Credentials, schemes []common.Scheme) (common.Principal, error) {
-	jwtInput, ok := in.(JWTInput)
+type jwtCredentialsHeader struct {
+	kid    string
+	hasKid bool
+	alg    string
+}
+
+func (v *JWTVerifier) verify(ctx context.Context, c JWTCredentials, header jwtCredentialsHeader, scheme JWTScheme) (common.Principal, error) {
+	if len(scheme.Keys) == 0 {
+		logx.L().Debug("missing scheme keys", "context", ctx)
+		return common.Principal{}, fmt.Errorf("%v: missing scheme keys", common.ErrInternal)
+	}
+	// scheme requires "kid" which is not present
+	if scheme.MustMatchKid && !header.hasKid {
+		logx.L().Debug("missing kid", "context", ctx)
+		return common.Principal{}, fmt.Errorf("%v: missing kid", common.ErrInvalidInput)
+	}
+
+	// find key
+	var key *sig.SignatureKey
+	var keyFound bool = false
+	if !header.hasKid && len(scheme.Keys) == 1 {
+		key = &scheme.Keys[0]
+		keyFound = true
+	} else {
+		key, keyFound = scheme.findKeyByKid(header.kid)
+	}
+
+	if !keyFound {
+		logx.L().Debug("invalid key", "context", ctx)
+		return common.Principal{}, fmt.Errorf("%v: invalid key", common.ErrInvalidCredentials)
+	}
+	headerAlg, err := sig.FromOAuth(header.alg)
+	if err != nil {
+		logx.L().Debug("invalid key alg", "context", ctx)
+		return common.Principal{}, fmt.Errorf("%v: invalid key", common.ErrInvalidCredentials)
+	}
+	if key.Alg != headerAlg {
+		logx.L().Debug("invalid key alg", "context", ctx)
+		return common.Principal{}, fmt.Errorf("%v: invalid key alg", common.ErrInvalidCredentials)
+	}
+
+	opts := v.buildParserOptions(scheme, *key)
+	claims, err := parseJWT(c.Token, key.Key, opts)
+	if err != nil {
+		logx.L().Debug("could not parse JWT", "context", ctx, "error", err)
+		return common.Principal{}, fmt.Errorf("%v: %v", common.ErrInvalidCredentials, err)
+	}
+	if claims.Subject == "" {
+		logx.L().Debug("missing `sub`", "context", ctx)
+		return common.Principal{}, fmt.Errorf("%v: missing `sub`", common.ErrInvalidCredentials)
+	}
+
+	return common.Principal{Subject: common.SubjectID(claims.Subject)}, nil
+}
+
+func (v *JWTVerifier) parseScheme(ctx context.Context, s common.Scheme) (JWTScheme, error) {
+	scheme, ok := s.(JWTScheme)
+	if !ok {
+		logx.L().Debug("could not cast scheme to JWTScheme", "context", ctx)
+		return JWTScheme{}, fmt.Errorf("%v: invalid scheme", common.ErrInternal)
+	}
+
+	return scheme, nil
+}
+
+func (v *JWTVerifier) parseInput(ctx context.Context, in common.Credentials) (JWTCredentials, jwtCredentialsHeader, error) {
+	jwtInput, ok := in.(JWTCredentials)
 	if !ok {
 		logx.L().Debug("could not cast InputCredentials to JWTInput", "context", ctx)
-		return common.Principal{}, common.ErrInvalidInput
+		return JWTCredentials{}, jwtCredentialsHeader{}, fmt.Errorf("%v: invalid token", common.ErrInvalidInput)
 	}
 	if jwtInput.Token == "" {
 		logx.L().Debug("empty token", "context", ctx)
-		return common.Principal{}, common.ErrInvalidInput
+		return JWTCredentials{}, jwtCredentialsHeader{}, fmt.Errorf("%v: empty token", common.ErrInvalidInput)
 	}
-
-	headerKid, tokenHasKid, headerAlg, err := v.parseJWTHeader(jwtInput.Token)
+	headerKid, headerHasKid, headerAlg, err := v.parseJWTHeader(jwtInput.Token)
 	if err != nil {
 		logx.L().Debug("could not parse token header", "context", ctx, "error", err)
-		return common.Principal{}, common.ErrInvalidInput
+		return JWTCredentials{}, jwtCredentialsHeader{}, fmt.Errorf("%v: invalid token format", common.ErrInvalidInput)
+	}
+	header := jwtCredentialsHeader{
+		kid:    headerKid,
+		hasKid: headerHasKid,
+		alg:    headerAlg,
+	}
+
+	return jwtInput, header, nil
+}
+
+func (v *JWTVerifier) Verify(ctx context.Context, in common.Credentials, s common.Scheme) (common.Principal, error) {
+	scheme, err := v.parseScheme(ctx, s)
+	if err != nil {
+		return common.Principal{}, err
+	}
+
+	jwtInput, header, err := v.parseInput(ctx, in)
+	if err != nil {
+		return common.Principal{}, err
+	}
+
+	return v.verify(ctx, jwtInput, header, scheme)
+}
+
+func (v *JWTVerifier) VerifyAny(ctx context.Context, in common.Credentials, schemes []common.Scheme) (common.Principal, error) {
+	jwtInput, header, err := v.parseInput(ctx, in)
+	if err != nil {
+		return common.Principal{}, err
 	}
 
 	for _, s := range schemes {
@@ -42,16 +134,16 @@ func (v *JWTVerifier) VerifyAny(ctx context.Context, in common.Credentials, sche
 			continue
 		}
 		// scheme requires "kid" which is not present
-		if conf.MustMatchKid && !tokenHasKid {
+		if conf.MustMatchKid && !header.hasKid {
 			continue
 		}
 
 		// Verify with the key(s)
 		for _, keyConfig := range conf.Keys {
-			if conf.MustMatchKid && headerKid != keyConfig.Kid {
+			if conf.MustMatchKid && header.kid != keyConfig.Kid {
 				continue
 			}
-			if alg, err := keyConfig.Alg.ToOAuth(); err == nil && alg != headerAlg {
+			if alg, err := keyConfig.Alg.ToOAuth(); err == nil && alg != header.alg {
 				continue
 			}
 			opts := v.buildParserOptions(conf, keyConfig)

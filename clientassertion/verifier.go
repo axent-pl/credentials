@@ -43,13 +43,15 @@ func (v *ClientAssertionVerifier) verify(ctx context.Context, c ClientAssertionC
 	if !h.hasKid && len(scheme.Keys) == 1 {
 		key = &scheme.Keys[0]
 		keyFound = true
+	} else {
+		key, keyFound = scheme.findKeyByKid(h.kid)
 	}
-	key, keyFound = scheme.findKeyByKid(h.kid)
+
 	if !keyFound {
 		logx.L().Debug("invalid key", "context", ctx)
 		return common.Principal{}, fmt.Errorf("%v: invalid key", common.ErrInvalidCredentials)
 	}
-	headerAlg, err := sig.FromSAML(h.alg)
+	headerAlg, err := sig.FromOAuth(h.alg)
 	if err != nil {
 		logx.L().Debug("invalid key alg", "context", ctx)
 		return common.Principal{}, fmt.Errorf("%v: invalid key", common.ErrInvalidCredentials)

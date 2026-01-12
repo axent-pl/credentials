@@ -36,7 +36,7 @@ func TestJWTVerifier_Verify(t *testing.T) {
 	}{
 		{
 			name: "valid RSA",
-			in: jwt.JWTInput{
+			in: jwt.JWTCredentials{
 				Token: string(accessToken.Bytes),
 			},
 			schemes: []common.Scheme{

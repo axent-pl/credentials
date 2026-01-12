@@ -79,7 +79,7 @@ func TestClientSecretVerifier_Verify(t *testing.T) {
 		},
 		{
 			name: "invalid input credentials kind",
-			in:   jwt.JWTInput{},
+			in:   jwt.JWTCredentials{},
 			stored: []common.Scheme{
 				clientsecret.ClientSecretScheme{
 					ClientID:   "acme",

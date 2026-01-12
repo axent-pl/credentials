@@ -77,7 +77,7 @@ func TestJWKSProvider_ValidationSchemes(t *testing.T) {
 	}{
 		{
 			name: "successful execution",
-			in:   jwt.JWTInput{Token: "ttt"},
+			in:   jwt.JWTCredentials{Token: "ttt"},
 			wantTest: func(schemes []common.Scheme) error {
 				if len(schemes) < 1 {
 					return errors.New("no schemes")
