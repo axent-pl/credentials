@@ -20,6 +20,7 @@ type JWTScheme struct {
 	//
 	// - https://datatracker.ietf.org/doc/html/rfc7519#section-4.1.5
 	Leeway time.Duration
+	Replay common.ReplayChecker
 }
 
 func (JWTScheme) Kind() common.Kind { return common.JWT }

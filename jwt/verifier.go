@@ -70,6 +70,14 @@ func (v *JWTVerifier) verify(ctx context.Context, c JWTCredentials, header jwtCr
 		return common.Principal{}, fmt.Errorf("%v: missing `sub`", common.ErrInvalidCredentials)
 	}
 
+	// replay
+	if scheme.Replay != nil && claims.ID != "" && claims.ExpiresAt != nil {
+		if scheme.Replay.Seen(ctx, claims.ID, claims.ExpiresAt.Time) {
+			logx.L().Debug("already seen", "context", ctx)
+			return common.Principal{}, fmt.Errorf("%v: already seen", common.ErrInvalidCredentials)
+		}
+	}
+
 	return common.Principal{Subject: common.SubjectID(claims.Subject)}, nil
 }
 
