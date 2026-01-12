@@ -10,7 +10,7 @@ import (
 type JWTScheme struct {
 	Subject      common.SubjectID
 	MustMatchKid bool
-	Keys         []sig.SignatureKey
+	Keys         []sig.SignatureVerificationKey
 	Issuer       string
 	Audience     string
 	// Leeway for "exp" and "nbf" claims
@@ -25,7 +25,7 @@ type JWTScheme struct {
 
 func (JWTScheme) Kind() common.Kind { return common.JWT }
 
-func (s *JWTScheme) findKeyByKid(kid string) (*sig.SignatureKey, bool) {
+func (s *JWTScheme) findKeyByKid(kid string) (*sig.SignatureVerificationKey, bool) {
 	for i := range s.Keys {
 		if s.Keys[i].Kid == kid {
 			return &s.Keys[i], true

@@ -38,7 +38,7 @@ func (v *ClientAssertionVerifier) verify(ctx context.Context, c ClientAssertionC
 	}
 
 	// find key
-	var key *sig.SignatureKey
+	var key *sig.SignatureVerificationKey
 	var keyFound bool = false
 	if !h.hasKid && len(scheme.Keys) == 1 {
 		key = &scheme.Keys[0]
@@ -161,7 +161,7 @@ func (v *ClientAssertionVerifier) VerifyAny(ctx context.Context, in common.Crede
 	return common.Principal{}, common.ErrInvalidCredentials
 }
 
-func buildClientAssertionParserOptions(scheme ClientAssertionScheme, keyConf sig.SignatureKey) []jwt.ParserOption {
+func buildClientAssertionParserOptions(scheme ClientAssertionScheme, keyConf sig.SignatureVerificationKey) []jwt.ParserOption {
 	var opts []jwt.ParserOption
 	if scheme.Subject != "" {
 		opts = append(opts, jwt.WithSubject(string(scheme.Subject)))

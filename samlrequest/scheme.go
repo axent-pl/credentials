@@ -6,7 +6,7 @@ import (
 )
 
 type SAMLRequestScheme struct {
-	Keys []sig.SignatureKey
+	Keys []sig.SignatureVerificationKey
 }
 
 func (SAMLRequestScheme) Kind() common.Kind { return common.SAMLRequest }

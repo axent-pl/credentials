@@ -14,7 +14,7 @@ type ClientAssertionScheme struct {
 	// and issue assertion with sub=Y
 	Subject      common.SubjectID
 	MustMatchKid bool
-	Keys         []sig.SignatureKey
+	Keys         []sig.SignatureVerificationKey
 	// It should be present,
 	// for self signed assertion its value will be the same as "sub"
 	Issuer string
@@ -29,7 +29,7 @@ type ClientAssertionScheme struct {
 
 func (ClientAssertionScheme) Kind() common.Kind { return common.ClientAssertion }
 
-func (s *ClientAssertionScheme) findKeyByKid(kid string) (*sig.SignatureKey, bool) {
+func (s *ClientAssertionScheme) findKeyByKid(kid string) (*sig.SignatureVerificationKey, bool) {
 	for i := range s.Keys {
 		if s.Keys[i].Kid == kid {
 			return &s.Keys[i], true

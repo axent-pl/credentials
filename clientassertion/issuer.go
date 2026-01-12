@@ -2,7 +2,6 @@ package clientassertion
 
 import (
 	"context"
-	"crypto"
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
@@ -17,12 +16,6 @@ import (
 
 // ---------- Client Assertion ----------
 
-type ClientAssertionIssueKey struct {
-	Kid        string
-	Alg        sig.SigAlg
-	PrivateKey crypto.PrivateKey
-}
-
 type ClientAssertionIssueParams struct {
 	// OAuth2 Client ID
 	ClientID string
@@ -34,7 +27,7 @@ type ClientAssertionIssueParams struct {
 	Exp time.Duration
 
 	// Signing key material
-	Key ClientAssertionIssueKey
+	Key sig.SignatureKey
 
 	// Optional overlay claims (e.g. "nbf", custom claims)
 	OverlayClaims map[string]any
@@ -134,7 +127,7 @@ func (iss *ClientAssertionIssuer) Sign(payload map[string]any, params ClientAsse
 		token.Header["kid"] = params.Key.Kid
 	}
 
-	tokenString, err := token.SignedString(params.Key.PrivateKey)
+	tokenString, err := token.SignedString(params.Key.Key)
 	if err != nil {
 		return nil, fmt.Errorf("could not sign payload: %w", err)
 	}

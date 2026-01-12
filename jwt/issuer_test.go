@@ -243,9 +243,9 @@ func TestJWTIssuer_Sign(t *testing.T) {
 			issueParams: jwt.JWTIssueParams{
 				Issuer: "acme-issuer",
 				Exp:    20 * time.Second,
-				Key: jwt.JWTIssueKey{
-					PrivateKey: rsaKey2048,
-					Alg:        sig.SigAlgRS1,
+				Key: sig.SignatureKey{
+					Key: rsaKey2048,
+					Alg: sig.SigAlgRS1,
 				},
 			},
 			wantErr: true,
@@ -258,9 +258,9 @@ func TestJWTIssuer_Sign(t *testing.T) {
 			issueParams: jwt.JWTIssueParams{
 				Issuer: "acme-issuer",
 				Exp:    20 * time.Second,
-				Key: jwt.JWTIssueKey{
-					PrivateKey: rsaKey2048,
-					Alg:        sig.SigAlgRS256,
+				Key: sig.SignatureKey{
+					Key: rsaKey2048,
+					Alg: sig.SigAlgRS256,
 				},
 			},
 			wantErr: false,
@@ -273,9 +273,9 @@ func TestJWTIssuer_Sign(t *testing.T) {
 			issueParams: jwt.JWTIssueParams{
 				Issuer: "acme-issuer",
 				Exp:    20 * time.Second,
-				Key: jwt.JWTIssueKey{
-					PrivateKey: rsaKey2048,
-					Alg:        sig.SigAlgRS384,
+				Key: sig.SignatureKey{
+					Key: rsaKey2048,
+					Alg: sig.SigAlgRS384,
 				},
 			},
 			wantErr: false,
@@ -288,9 +288,9 @@ func TestJWTIssuer_Sign(t *testing.T) {
 			issueParams: jwt.JWTIssueParams{
 				Issuer: "acme-issuer",
 				Exp:    20 * time.Second,
-				Key: jwt.JWTIssueKey{
-					PrivateKey: rsaKey2048,
-					Alg:        sig.SigAlgRS512,
+				Key: sig.SignatureKey{
+					Key: rsaKey2048,
+					Alg: sig.SigAlgRS512,
 				},
 			},
 			wantErr: false,
@@ -303,9 +303,9 @@ func TestJWTIssuer_Sign(t *testing.T) {
 			issueParams: jwt.JWTIssueParams{
 				Issuer: "acme-issuer",
 				Exp:    20 * time.Second,
-				Key: jwt.JWTIssueKey{
-					PrivateKey: ecdsaKeyP256,
-					Alg:        sig.SigAlgES256,
+				Key: sig.SignatureKey{
+					Key: ecdsaKeyP256,
+					Alg: sig.SigAlgES256,
 				},
 			},
 			wantErr: false,
@@ -318,9 +318,9 @@ func TestJWTIssuer_Sign(t *testing.T) {
 			issueParams: jwt.JWTIssueParams{
 				Issuer: "acme-issuer",
 				Exp:    20 * time.Second,
-				Key: jwt.JWTIssueKey{
-					PrivateKey: ecdsaKeyP384,
-					Alg:        sig.SigAlgES384,
+				Key: sig.SignatureKey{
+					Key: ecdsaKeyP384,
+					Alg: sig.SigAlgES384,
 				},
 			},
 			wantErr: false,
@@ -333,9 +333,9 @@ func TestJWTIssuer_Sign(t *testing.T) {
 			issueParams: jwt.JWTIssueParams{
 				Issuer: "acme-issuer",
 				Exp:    20 * time.Second,
-				Key: jwt.JWTIssueKey{
-					PrivateKey: ecdsaKeyP256,
-					Alg:        sig.SigAlgES384,
+				Key: sig.SignatureKey{
+					Key: ecdsaKeyP256,
+					Alg: sig.SigAlgES384,
 				},
 			},
 			wantErr: true,
@@ -375,9 +375,9 @@ func TestJWTIssuer_Issue(t *testing.T) {
 			issueParams: jwt.JWTIssueParams{
 				Issuer: "acme-issuer",
 				Exp:    20 * time.Second,
-				Key: jwt.JWTIssueKey{
-					PrivateKey: rsaKey,
-					Alg:        sig.SigAlgRS256,
+				Key: sig.SignatureKey{
+					Key: rsaKey,
+					Alg: sig.SigAlgRS256,
 				},
 			},
 			wantErr: false,

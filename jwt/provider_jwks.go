@@ -261,7 +261,7 @@ func (p *JWKSProvider) refresh(ctx context.Context) error {
 		return err
 	}
 
-	keys := make([]sig.SignatureKey, 0, len(doc.Keys))
+	keys := make([]sig.SignatureVerificationKey, 0, len(doc.Keys))
 	allHaveKID := true
 	for _, jk := range doc.Keys {
 		pub, err := JwkToPublicKey(jk)
@@ -277,7 +277,7 @@ func (p *JWKSProvider) refresh(ctx context.Context) error {
 		}
 		alg, _ := sig.FromOAuth(jk.Alg)
 
-		keys = append(keys, sig.SignatureKey{
+		keys = append(keys, sig.SignatureVerificationKey{
 			Kid: jk.Kid,
 			Key: pub,
 			Alg: alg,

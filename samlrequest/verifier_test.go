@@ -48,7 +48,7 @@ func TestSAMLRequestVerifier_Verify(t *testing.T) {
 			in:   samlRequest,
 			schemes: []common.Scheme{
 				samlrequest.SAMLRequestScheme{
-					Keys: []sig.SignatureKey{
+					Keys: []sig.SignatureVerificationKey{
 						{
 							Key: rsaKey.PublicKey,
 							Alg: sig.SigAlgRS256,

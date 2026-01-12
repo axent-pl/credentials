@@ -17,9 +17,9 @@ func TestJWTVerifier_Verify(t *testing.T) {
 	issueParams := jwt.JWTIssueParams{
 		Issuer: "acme-issuer",
 		Exp:    20 * time.Second,
-		Key: jwt.JWTIssueKey{
-			PrivateKey: rsaKey,
-			Alg:        sig.SigAlgRS256,
+		Key: sig.SignatureKey{
+			Key: rsaKey,
+			Alg: sig.SigAlgRS256,
 		},
 	}
 	var issuer jwt.JWTIssuer
@@ -41,7 +41,7 @@ func TestJWTVerifier_Verify(t *testing.T) {
 			},
 			schemes: []common.Scheme{
 				jwt.JWTScheme{
-					Keys: []sig.SignatureKey{
+					Keys: []sig.SignatureVerificationKey{
 						{
 							Key: &rsaKey.PublicKey,
 						},

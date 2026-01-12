@@ -37,7 +37,7 @@ func (v *JWTVerifier) verify(ctx context.Context, c JWTCredentials, header jwtCr
 	}
 
 	// find key
-	var key *sig.SignatureKey
+	var key *sig.SignatureVerificationKey
 	var keyFound bool = false
 	if !header.hasKid && len(scheme.Keys) == 1 {
 		key = &scheme.Keys[0]
@@ -154,7 +154,7 @@ func (v *JWTVerifier) VerifyAny(ctx context.Context, in common.Credentials, sche
 }
 
 // Build parser options for JWT validation.
-func (v *JWTVerifier) buildParserOptions(scheme JWTScheme, keyConf sig.SignatureKey) []jwtx.ParserOption {
+func (v *JWTVerifier) buildParserOptions(scheme JWTScheme, keyConf sig.SignatureVerificationKey) []jwtx.ParserOption {
 	var opts []jwtx.ParserOption
 	if scheme.Subject != "" {
 		opts = append(opts, jwtx.WithSubject(string(scheme.Subject)))

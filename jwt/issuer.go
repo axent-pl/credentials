@@ -2,7 +2,6 @@ package jwt
 
 import (
 	"context"
-	"crypto"
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
@@ -16,17 +15,11 @@ import (
 	jwtx "github.com/golang-jwt/jwt/v5"
 )
 
-type JWTIssueKey struct {
-	Kid        string
-	Alg        sig.SigAlg
-	PrivateKey crypto.PrivateKey
-}
-
 // -- issue params
 type JWTIssueParams struct {
 	Issuer string
 	Exp    time.Duration
-	Key    JWTIssueKey
+	Key    sig.SignatureKey
 
 	AuthorizedParty common.SubjectID
 
@@ -148,7 +141,7 @@ func (iss *JWTIssuer) Sign(payload map[string]any, params JWTIssueParams) ([]byt
 		token.Header["kid"] = params.Key.Kid
 	}
 
-	tokenString, err := token.SignedString(params.Key.PrivateKey)
+	tokenString, err := token.SignedString(params.Key.Key)
 	if err != nil {
 		return nil, fmt.Errorf("could not sign payload: %w", err)
 	}
