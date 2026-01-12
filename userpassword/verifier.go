@@ -14,7 +14,7 @@ var _ common.Verifier = &UserPasswordVerifier{}
 
 func (v *UserPasswordVerifier) Kind() common.Kind { return common.Password }
 
-func (v *UserPasswordVerifier) Verify(ctx context.Context, in common.Credentials, schemes []common.Scheme) (common.Principal, error) {
+func (v *UserPasswordVerifier) VerifyAny(ctx context.Context, in common.Credentials, schemes []common.Scheme) (common.Principal, error) {
 	userPasswordInput, ok := in.(UserPasswordInput)
 	if !ok {
 		logx.L().Debug("could not cast InputCredentials to UserPasswordInput", "context", ctx)

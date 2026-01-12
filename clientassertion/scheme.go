@@ -34,3 +34,12 @@ type ClientAssertionSchemeKey struct {
 }
 
 func (ClientAssertionScheme) Kind() common.Kind { return common.ClientAssertion }
+
+func (s *ClientAssertionScheme) findKeyByKid(kid string) (*ClientAssertionSchemeKey, bool) {
+	for i := range s.Keys {
+		if s.Keys[i].Kid == kid {
+			return &s.Keys[i], true
+		}
+	}
+	return nil, false
+}

@@ -14,7 +14,7 @@ var _ common.Verifier = &ClientSecretVerifier{}
 
 func (v *ClientSecretVerifier) Kind() common.Kind { return common.ClientSecret }
 
-func (v *ClientSecretVerifier) Verify(ctx context.Context, in common.Credentials, stored []common.Scheme) (common.Principal, error) {
+func (v *ClientSecretVerifier) VerifyAny(ctx context.Context, in common.Credentials, stored []common.Scheme) (common.Principal, error) {
 	clientSecretInput, ok := in.(ClientSecretCredentials)
 	if !ok {
 		logx.L().Debug("could not cast InputCredentials to ClientSecretInput", "context", ctx)

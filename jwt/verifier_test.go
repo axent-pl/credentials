@@ -58,7 +58,7 @@ func TestJWTVerifier_Verify(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// TODO: construct the receiver type.
 			var v jwt.JWTVerifier
-			got, gotErr := v.Verify(context.Background(), tt.in, tt.schemes)
+			got, gotErr := v.VerifyAny(context.Background(), tt.in, tt.schemes)
 			if gotErr != nil {
 				if !tt.wantErr {
 					t.Errorf("Verify() failed: %v", gotErr)

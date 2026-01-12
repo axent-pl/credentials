@@ -17,7 +17,7 @@ var _ common.Verifier = &JWTVerifier{}
 
 func (v *JWTVerifier) Kind() common.Kind { return common.JWT }
 
-func (v *JWTVerifier) Verify(ctx context.Context, in common.Credentials, schemes []common.Scheme) (common.Principal, error) {
+func (v *JWTVerifier) VerifyAny(ctx context.Context, in common.Credentials, schemes []common.Scheme) (common.Principal, error) {
 	jwtInput, ok := in.(JWTInput)
 	if !ok {
 		logx.L().Debug("could not cast InputCredentials to JWTInput", "context", ctx)

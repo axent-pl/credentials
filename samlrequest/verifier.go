@@ -17,7 +17,7 @@ var _ common.Verifier = &SAMLRequestVerifier{}
 
 func (v *SAMLRequestVerifier) Kind() common.Kind { return common.SAMLRequest }
 
-func (v *SAMLRequestVerifier) Verify(ctx context.Context, in common.Credentials, schemes []common.Scheme) (common.Principal, error) {
+func (v *SAMLRequestVerifier) VerifyAny(ctx context.Context, in common.Credentials, schemes []common.Scheme) (common.Principal, error) {
 	samlRequestInput, ok := in.(SAMLRequestCredentials)
 	if !ok {
 		logx.L().Debug("could not cast Input to SAMLRequestInput", "context", ctx)

@@ -24,7 +24,7 @@ func (a *Authenticator) Authenticate(ctx context.Context, in common.Credentials)
 		return common.Principal{}, common.ErrInvalidCredentials
 	}
 
-	principal, err := verifier.Verify(ctx, in, validationSchemes)
+	principal, err := verifier.VerifyAny(ctx, in, validationSchemes)
 	if err != nil {
 		return common.Principal{}, common.ErrInvalidCredentials
 	}

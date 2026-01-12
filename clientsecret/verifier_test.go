@@ -93,7 +93,7 @@ func TestClientSecretVerifier_Verify(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var v clientsecret.ClientSecretVerifier
-			got, gotErr := v.Verify(context.Background(), tt.in, tt.stored)
+			got, gotErr := v.VerifyAny(context.Background(), tt.in, tt.stored)
 			if gotErr != nil {
 				if !tt.wantErr {
 					t.Errorf("Verify() failed: %v", gotErr)

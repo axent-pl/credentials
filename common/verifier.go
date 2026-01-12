@@ -9,5 +9,5 @@ type Scheme interface {
 }
 type Verifier interface {
 	Kind() Kind
-	Verify(ctx context.Context, in Credentials, stored []Scheme) (Principal, error)
+	VerifyAny(ctx context.Context, in Credentials, stored []Scheme) (Principal, error)
 }

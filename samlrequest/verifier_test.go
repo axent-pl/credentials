@@ -65,7 +65,7 @@ func TestSAMLRequestVerifier_Verify(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var v samlrequest.SAMLRequestVerifier
-			got, gotErr := v.Verify(context.Background(), tt.in, tt.schemes)
+			got, gotErr := v.VerifyAny(context.Background(), tt.in, tt.schemes)
 			if gotErr != nil {
 				if !tt.wantErr {
 					t.Errorf("Verify() failed: %v", gotErr)
