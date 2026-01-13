@@ -6,7 +6,7 @@ REPORT_DIR := test/reports/sast
 .IGNORE: sast-gosec sast-govulncheck
 
 sast-gosec:
-	@docker run --rm -it -v "$(PWD)":/workspace -w /workspace securego/gosec:latest -out $(REPORT_DIR)/gosec.txt ./...
+	@docker run --rm -it -v "$(PWD)":/workspace -w /workspace securego/gosec:2.22.11 -out $(REPORT_DIR)/gosec.txt ./...
 	@echo "SAST gosec completed"
 
 sast-govulncheck:
