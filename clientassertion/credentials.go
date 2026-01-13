@@ -1,6 +1,8 @@
 package clientassertion
 
-import "github.com/axent-pl/credentials/common"
+import (
+	"github.com/axent-pl/credentials/common"
+)
 
 type ClientAssertionCredentials struct {
 	ClientId            string
