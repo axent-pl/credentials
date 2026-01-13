@@ -292,7 +292,7 @@ func (p *JWKSProvider) refresh(ctx context.Context) error {
 		return err
 	}
 
-	scheme := JWTScheme{
+	scheme := DefaultJWTScheme{
 		MustMatchKid: allHaveKID && len(keys) > 1, // require kid only if all keys provide it and there are multiple keys
 		Keys:         keys,
 	}

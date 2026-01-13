@@ -85,7 +85,7 @@ func TestJWKSProvider_ValidationSchemes(t *testing.T) {
 				if len(schemes) != 1 {
 					return fmt.Errorf("want 1 schemes, got %d", len(schemes))
 				}
-				jwtScheme, ok := schemes[0].(jwt.JWTScheme)
+				jwtScheme, ok := schemes[0].(jwt.DefaultJWTScheme)
 				if !ok {
 					return errors.New("invalid scheme type, want JWTScheme")
 				}

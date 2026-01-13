@@ -7,3 +7,5 @@ type JWTCredentials struct {
 }
 
 func (JWTCredentials) Kind() common.Kind { return common.JWT }
+
+var _ common.Credentials = JWTCredentials{}

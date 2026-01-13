@@ -24,8 +24,14 @@ type DefaultClientAssertionScheme struct {
 	// Otherwise attacker may use a token not meant
 	// for client authenticatio with client_assertion.
 	Audience string
-	Leeway   time.Duration
-	Replay   common.ReplayChecker
+	// Leeway for "exp" and "nbf" claims
+	// See
+	//
+	// - https://datatracker.ietf.org/doc/html/rfc7519#section-4.1.4
+	//
+	// - https://datatracker.ietf.org/doc/html/rfc7519#section-4.1.5
+	Leeway time.Duration
+	Replay common.ReplayChecker
 }
 
 func (DefaultClientAssertionScheme) Kind() common.Kind { return common.ClientAssertion }

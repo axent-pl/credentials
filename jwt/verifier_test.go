@@ -40,7 +40,7 @@ func TestJWTVerifier_Verify(t *testing.T) {
 				Token: string(accessToken.Bytes),
 			},
 			schemes: []common.Scheme{
-				jwt.JWTScheme{
+				jwt.DefaultJWTScheme{
 					Keys: []sig.SignatureVerificationKey{
 						{
 							Key: &rsaKey.PublicKey,

@@ -24,17 +24,17 @@ type jwtCredentialsHeader struct {
 	alg    string
 }
 
-func (v *JWTVerifier) verify(ctx context.Context, c JWTCredentials, header jwtCredentialsHeader, scheme JWTScheme) (common.Principal, error) {
+func (v *JWTVerifier) verify(ctx context.Context, c JWTCredentials, header jwtCredentialsHeader, scheme JWTSchemer) (common.Principal, error) {
 	// validate signature key
-	if len(scheme.Keys) == 0 {
+	if len(scheme.GetKeys()) == 0 {
 		logx.L().Debug("missing scheme keys", "context", ctx)
 		return common.Principal{}, fmt.Errorf("%v: missing scheme keys", common.ErrInternal)
 	}
-	if scheme.MustMatchKid && !header.hasKid {
+	if scheme.GetMustMatchKid() && !header.hasKid {
 		logx.L().Debug("missing kid", "context", ctx)
 		return common.Principal{}, fmt.Errorf("%v: missing kid", common.ErrInvalidInput)
 	}
-	key, keyFound := sig.FindSignatureVerificationKey(scheme.Keys, header.kid)
+	key, keyFound := sig.FindSignatureVerificationKey(scheme.GetKeys(), header.kid)
 
 	if !keyFound {
 		logx.L().Debug("invalid key", "context", ctx)
@@ -63,21 +63,21 @@ func (v *JWTVerifier) verify(ctx context.Context, c JWTCredentials, header jwtCr
 	}
 
 	// validate replay
-	if scheme.Replay != nil && claims.ID != "" && claims.ExpiresAt != nil {
-		if scheme.Replay.Seen(ctx, claims.ID, claims.ExpiresAt.Time) {
+	if scheme.GetReplay() != nil && claims.ID != "" && claims.ExpiresAt != nil {
+		if scheme.GetReplay().Seen(ctx, claims.ID, claims.ExpiresAt.Time) {
 			logx.L().Debug("already seen", "context", ctx)
 			return common.Principal{}, fmt.Errorf("%v: already seen", common.ErrInvalidCredentials)
 		}
 	}
 
-	return common.Principal{Subject: common.SubjectID(claims.Subject)}, nil
+	return scheme.ParsePrincipal(claims)
 }
 
-func (v *JWTVerifier) parseScheme(ctx context.Context, s common.Scheme) (JWTScheme, error) {
-	scheme, ok := s.(JWTScheme)
+func (v *JWTVerifier) parseScheme(ctx context.Context, s common.Scheme) (JWTSchemer, error) {
+	scheme, ok := s.(JWTSchemer)
 	if !ok {
 		logx.L().Debug("could not cast scheme to JWTScheme", "context", ctx)
-		return JWTScheme{}, fmt.Errorf("%v: invalid scheme", common.ErrInternal)
+		return nil, fmt.Errorf("%v: invalid scheme", common.ErrInternal)
 	}
 
 	return scheme, nil
@@ -145,19 +145,19 @@ func (v *JWTVerifier) VerifyAny(ctx context.Context, in common.Credentials, sche
 }
 
 // Build parser options for JWT validation.
-func (v *JWTVerifier) buildParserOptions(scheme JWTScheme, keyConf sig.SignatureVerificationKey) []jwtx.ParserOption {
+func (v *JWTVerifier) buildParserOptions(scheme JWTSchemer, keyConf sig.SignatureVerificationKey) []jwtx.ParserOption {
 	var opts []jwtx.ParserOption
-	if scheme.Subject != "" {
-		opts = append(opts, jwtx.WithSubject(string(scheme.Subject)))
+	if scheme.GetSubject() != "" {
+		opts = append(opts, jwtx.WithSubject(string(scheme.GetSubject())))
 	}
-	if scheme.Leeway > 0 {
-		opts = append(opts, jwtx.WithLeeway(scheme.Leeway))
+	if scheme.GetLeeway() > 0 {
+		opts = append(opts, jwtx.WithLeeway(scheme.GetLeeway()))
 	}
-	if scheme.Issuer != "" {
-		opts = append(opts, jwtx.WithIssuer(scheme.Issuer))
+	if scheme.GetIssuer() != "" {
+		opts = append(opts, jwtx.WithIssuer(scheme.GetIssuer()))
 	}
-	if scheme.Audience != "" {
-		opts = append(opts, jwtx.WithAudience(scheme.Audience))
+	if scheme.GetAudience() != "" {
+		opts = append(opts, jwtx.WithAudience(scheme.GetAudience()))
 	}
 	if keyConf.Alg != sig.SigAlgUnknown {
 		alg, err := keyConf.Alg.ToOAuth()
