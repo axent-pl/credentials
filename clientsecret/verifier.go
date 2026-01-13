@@ -5,7 +5,6 @@ import (
 
 	"github.com/axent-pl/credentials/common"
 	"github.com/axent-pl/credentials/common/logx"
-	"golang.org/x/crypto/bcrypt"
 )
 
 type ClientSecretVerifier struct{}
@@ -14,31 +13,39 @@ var _ common.Verifier = &ClientSecretVerifier{}
 
 func (v *ClientSecretVerifier) Kind() common.Kind { return common.ClientSecret }
 
-func (v *ClientSecretVerifier) VerifyAny(ctx context.Context, in common.Credentials, stored []common.Scheme) (common.Principal, error) {
+func (v *ClientSecretVerifier) parseInput(ctx context.Context, in common.Credentials) (ClientSecretCredentials, error) {
 	clientSecretInput, ok := in.(ClientSecretCredentials)
 	if !ok {
 		logx.L().Debug("could not cast InputCredentials to ClientSecretInput", "context", ctx)
-		return common.Principal{}, common.ErrInvalidInput
+		return ClientSecretCredentials{}, common.ErrInvalidInput
 	}
 	if clientSecretInput.ClientID == "" {
 		logx.L().Debug("empty client_id", "context", ctx)
-		return common.Principal{}, common.ErrInvalidInput
+		return ClientSecretCredentials{}, common.ErrInvalidInput
 	}
 	if clientSecretInput.ClientSecret == "" {
 		logx.L().Debug("empty client_secret", "context", ctx)
-		return common.Principal{}, common.ErrInvalidInput
+		return ClientSecretCredentials{}, common.ErrInvalidInput
+	}
+	return clientSecretInput, nil
+}
+
+func (v *ClientSecretVerifier) VerifyAny(ctx context.Context, in common.Credentials, schemes []common.Scheme) (common.Principal, error) {
+	clientSecretInput, err := v.parseInput(ctx, in)
+	if err != nil {
+		return common.Principal{}, err
 	}
 
-	for _, s := range stored {
-		clientSecretStored, ok := s.(ClientSecretScheme)
-		if !ok || clientSecretStored.ClientID != clientSecretInput.ClientID {
+	for _, s := range schemes {
+		scheme, ok := s.(ClientSecretSchemer)
+		if !ok {
 			continue
 		}
-		if err := bcrypt.CompareHashAndPassword([]byte(clientSecretStored.SecretHash), []byte(clientSecretInput.ClientSecret)); err != nil {
+		if err := scheme.CompareIdAndSecret(clientSecretInput.ClientID, clientSecretInput.ClientSecret); err != nil {
 			continue
 		}
 
-		return common.Principal{Subject: common.SubjectID(clientSecretStored.ClientID)}, nil
+		return common.Principal{Subject: common.SubjectID(clientSecretInput.ClientID)}, nil
 
 	}
 	return common.Principal{}, common.ErrInvalidCredentials

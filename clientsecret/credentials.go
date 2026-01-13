@@ -1,6 +1,8 @@
 package clientsecret
 
-import "github.com/axent-pl/credentials/common"
+import (
+	"github.com/axent-pl/credentials/common"
+)
 
 type ClientSecretCredentials struct {
 	ClientID     string

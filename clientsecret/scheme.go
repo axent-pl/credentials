@@ -1,14 +1,6 @@
 package clientsecret
 
-import (
-	"github.com/axent-pl/credentials/common"
-)
-
-type ClientSecretScheme struct {
-	ClientID   string
-	SecretHash []byte
+type ClientSecretSchemer interface {
+	GetClientId() string
+	CompareIdAndSecret(id string, secret string) error
 }
-
-func (ClientSecretScheme) Kind() common.Kind { return common.ClientSecret }
-
-var _ common.Scheme = ClientSecretScheme{}

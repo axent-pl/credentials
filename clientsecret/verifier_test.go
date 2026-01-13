@@ -27,7 +27,7 @@ func TestClientSecretVerifier_Verify(t *testing.T) {
 				ClientSecret: validPassword,
 			},
 			stored: []common.Scheme{
-				clientsecret.ClientSecretScheme{
+				clientsecret.DefaultClientSecretScheme{
 					ClientID:   "acme",
 					SecretHash: validPasswordHash,
 				},
@@ -42,7 +42,7 @@ func TestClientSecretVerifier_Verify(t *testing.T) {
 				ClientSecret: validPassword,
 			},
 			stored: []common.Scheme{
-				clientsecret.ClientSecretScheme{
+				clientsecret.DefaultClientSecretScheme{
 					ClientID:   "acme-other",
 					SecretHash: validPasswordHash,
 				},
@@ -57,7 +57,7 @@ func TestClientSecretVerifier_Verify(t *testing.T) {
 				ClientSecret: "invalid password",
 			},
 			stored: []common.Scheme{
-				clientsecret.ClientSecretScheme{
+				clientsecret.DefaultClientSecretScheme{
 					ClientID:   "acme",
 					SecretHash: validPasswordHash,
 				},
@@ -69,7 +69,7 @@ func TestClientSecretVerifier_Verify(t *testing.T) {
 			name: "empty input credentials",
 			in:   clientsecret.ClientSecretCredentials{},
 			stored: []common.Scheme{
-				clientsecret.ClientSecretScheme{
+				clientsecret.DefaultClientSecretScheme{
 					ClientID:   "acme",
 					SecretHash: validPasswordHash,
 				},
@@ -81,7 +81,7 @@ func TestClientSecretVerifier_Verify(t *testing.T) {
 			name: "invalid input credentials kind",
 			in:   jwt.JWTCredentials{},
 			stored: []common.Scheme{
-				clientsecret.ClientSecretScheme{
+				clientsecret.DefaultClientSecretScheme{
 					ClientID:   "acme",
 					SecretHash: validPasswordHash,
 				},
