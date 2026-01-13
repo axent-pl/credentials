@@ -12,7 +12,6 @@ import (
 	jwtx "github.com/golang-jwt/jwt/v5"
 )
 
-// JWTVerifier validates JWT-based credentials using configured schemes.
 type JWTVerifier struct{}
 
 var _ common.Verifier = &JWTVerifier{}
@@ -26,17 +25,15 @@ type jwtCredentialsHeader struct {
 }
 
 func (v *JWTVerifier) verify(ctx context.Context, c JWTCredentials, header jwtCredentialsHeader, scheme JWTScheme) (common.Principal, error) {
+	// validate signature key
 	if len(scheme.Keys) == 0 {
 		logx.L().Debug("missing scheme keys", "context", ctx)
 		return common.Principal{}, fmt.Errorf("%v: missing scheme keys", common.ErrInternal)
 	}
-	// scheme requires "kid" which is not present
 	if scheme.MustMatchKid && !header.hasKid {
 		logx.L().Debug("missing kid", "context", ctx)
 		return common.Principal{}, fmt.Errorf("%v: missing kid", common.ErrInvalidInput)
 	}
-
-	// find key
 	key, keyFound := sig.FindSignatureVerificationKey(scheme.Keys, header.kid)
 
 	if !keyFound {
@@ -53,6 +50,7 @@ func (v *JWTVerifier) verify(ctx context.Context, c JWTCredentials, header jwtCr
 		return common.Principal{}, fmt.Errorf("%v: invalid key alg", common.ErrInvalidCredentials)
 	}
 
+	// parse token
 	opts := v.buildParserOptions(scheme, *key)
 	claims, err := parseJWT(c.Token, key.Key, opts)
 	if err != nil {
@@ -64,7 +62,7 @@ func (v *JWTVerifier) verify(ctx context.Context, c JWTCredentials, header jwtCr
 		return common.Principal{}, fmt.Errorf("%v: missing `sub`", common.ErrInvalidCredentials)
 	}
 
-	// replay
+	// validate replay
 	if scheme.Replay != nil && claims.ID != "" && claims.ExpiresAt != nil {
 		if scheme.Replay.Seen(ctx, claims.ID, claims.ExpiresAt.Time) {
 			logx.L().Debug("already seen", "context", ctx)
@@ -186,9 +184,8 @@ func (v *JWTVerifier) parseJWTHeader(token string) (kid string, hasKid bool, alg
 }
 
 func parseJWT(token string, key crypto.PublicKey, opts []jwtx.ParserOption) (*jwtx.RegisteredClaims, error) {
-	// verify and parse token with given key and options
 	claims := &jwtx.RegisteredClaims{}
-	jwtToken, err := jwtx.ParseWithClaims(
+	tok, err := jwtx.ParseWithClaims(
 		token,
 		claims,
 		func(t *jwtx.Token) (interface{}, error) {
@@ -199,10 +196,10 @@ func parseJWT(token string, key crypto.PublicKey, opts []jwtx.ParserOption) (*jw
 	if err != nil {
 		return nil, fmt.Errorf("could not parse token: %w", err)
 	}
-	if jwtToken == nil {
+	if tok == nil {
 		return nil, errors.New("token is empty")
 	}
-	if !jwtToken.Valid {
+	if !tok.Valid {
 		return nil, errors.New("token is invalid")
 	}
 	return claims, nil

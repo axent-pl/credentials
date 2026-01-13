@@ -12,9 +12,6 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
-// Common URN per RFC 7523 / OAuth 2.0 JWT bearer assertions.
-const URNClientAssertionType = "urn:ietf:params:oauth:client-assertion-type:jwt-bearer"
-
 type ClientAssertionVerifier struct{}
 
 var _ common.Verifier = &ClientAssertionVerifier{}
@@ -28,18 +25,22 @@ type clientAssertionCredentialsHeader struct {
 }
 
 func (v *ClientAssertionVerifier) verify(ctx context.Context, c ClientAssertionCredentials, h clientAssertionCredentialsHeader, scheme ClientAssertionSchemer) (common.Principal, error) {
+	// validate client assertion type
+	if c.ClientAssertionType != scheme.GetClientAssertionType() {
+		logx.L().Debug(fmt.Sprintf("invalid client_assertion_type: got '%s', want '%s", c.ClientAssertionType, scheme.GetClientAssertionType()), "context", ctx)
+		return common.Principal{}, common.ErrInvalidInput
+	}
+
+	// validate signature key
 	if len(scheme.GetKeys()) == 0 {
-		logx.L().Debug("missing Keys in ClientAssertionScheme", "context", ctx)
+		logx.L().Debug("missing scheme keys", "context", ctx)
 		return common.Principal{}, fmt.Errorf("%v: missing keys in scheme", common.ErrInternal)
 	}
 	if scheme.GetMustMatchKid() && !h.hasKid {
 		logx.L().Debug("missing `kid`", "context", ctx)
 		return common.Principal{}, fmt.Errorf("%v: missing `kid`", common.ErrInvalidCredentials)
 	}
-
-	// find key
 	key, keyFound := sig.FindSignatureVerificationKey(scheme.GetKeys(), h.kid)
-
 	if !keyFound {
 		logx.L().Debug("invalid key", "context", ctx)
 		return common.Principal{}, fmt.Errorf("%v: invalid key", common.ErrInvalidCredentials)
@@ -49,8 +50,6 @@ func (v *ClientAssertionVerifier) verify(ctx context.Context, c ClientAssertionC
 		logx.L().Debug("invalid key alg", "context", ctx)
 		return common.Principal{}, fmt.Errorf("%v: invalid key", common.ErrInvalidCredentials)
 	}
-
-	// check key alg
 	if key.Alg != headerAlg {
 		logx.L().Debug("invalid key alg", "context", ctx)
 		return common.Principal{}, fmt.Errorf("%v: invalid key alg", common.ErrInvalidCredentials)
@@ -58,7 +57,7 @@ func (v *ClientAssertionVerifier) verify(ctx context.Context, c ClientAssertionC
 
 	// parse assertion
 	opts := buildClientAssertionParserOptions(scheme, *key)
-	claims, err := parseClientAssertion(c.ClientAssertion, key.Key, opts)
+	claims, err := parseJWT(c.ClientAssertion, key.Key, opts)
 	if err != nil {
 		logx.L().Debug("could not parse ClientAssertion", "context", ctx, "error", err)
 		return common.Principal{}, fmt.Errorf("%v: %v", common.ErrInvalidCredentials, err)
@@ -68,7 +67,7 @@ func (v *ClientAssertionVerifier) verify(ctx context.Context, c ClientAssertionC
 		return common.Principal{}, fmt.Errorf("%v: missing `sub`", common.ErrInvalidCredentials)
 	}
 
-	// replay
+	// validate replay
 	if scheme.GetReplay() != nil && claims.ID != "" && claims.ExpiresAt != nil {
 		if scheme.GetReplay().Seen(ctx, claims.ID, claims.ExpiresAt.Time) {
 			logx.L().Debug("already seen", "context", ctx)
@@ -76,73 +75,67 @@ func (v *ClientAssertionVerifier) verify(ctx context.Context, c ClientAssertionC
 		}
 	}
 
-	return common.Principal{Subject: common.SubjectID(claims.Subject)}, nil
+	return scheme.ParsePrincipal(claims)
 }
 
-func (v *ClientAssertionVerifier) Verify(ctx context.Context, in common.Credentials, s common.Scheme) (common.Principal, error) {
+func (v *ClientAssertionVerifier) parseScheme(ctx context.Context, s common.Scheme) (ClientAssertionSchemer, error) {
 	scheme, ok := s.(ClientAssertionSchemer)
 	if !ok {
-		logx.L().Debug("could not cast scheme to ClientAssertionSchemer", "context", ctx)
-		return common.Principal{}, fmt.Errorf("%v: invalid scheme", common.ErrInternal)
+		logx.L().Debug("scheme does not implement ClientAssertion Scheme", "context", ctx)
+		return nil, fmt.Errorf("%v: invalid scheme", common.ErrInternal)
 	}
 
+	return scheme, nil
+}
+
+func (v *ClientAssertionVerifier) parseInput(ctx context.Context, in common.Credentials) (ClientAssertionCredentials, clientAssertionCredentialsHeader, error) {
 	clientAssertionInput, ok := in.(ClientAssertionCredentials)
 	if !ok {
 		logx.L().Debug("could not cast InputCredentials to ClientAssertionInput", "context", ctx)
-		return common.Principal{}, common.ErrInvalidInput
+		return ClientAssertionCredentials{}, clientAssertionCredentialsHeader{}, common.ErrInvalidInput
 	}
 	if clientAssertionInput.ClientAssertion == "" {
 		logx.L().Debug("empty client_assertion", "context", ctx)
-		return common.Principal{}, common.ErrInvalidInput
-	}
-	if clientAssertionInput.ClientAssertionType != URNClientAssertionType {
-		logx.L().Debug(fmt.Sprintf("invalid client_assertion_type: got '%s', want '%s", clientAssertionInput.ClientAssertionType, URNClientAssertionType), "context", ctx)
-		return common.Principal{}, common.ErrInvalidInput
+		return ClientAssertionCredentials{}, clientAssertionCredentialsHeader{}, common.ErrInvalidInput
 	}
 
-	headerKid, headerHasKid, headerAlg, err := parseClientAssertionHeader(clientAssertionInput.ClientAssertion)
+	headerKid, headerHasKid, headerAlg, err := parseJWTHeader(clientAssertionInput.ClientAssertion)
 	if err != nil {
 		logx.L().Debug("could not parse client_assertion token header", "context", ctx, "error", err)
-		return common.Principal{}, common.ErrInvalidInput
+		return ClientAssertionCredentials{}, clientAssertionCredentialsHeader{}, common.ErrInvalidInput
 	}
 	header := clientAssertionCredentialsHeader{
 		kid:    headerKid,
 		hasKid: headerHasKid,
 		alg:    headerAlg,
+	}
+
+	return clientAssertionInput, header, nil
+}
+
+func (v *ClientAssertionVerifier) Verify(ctx context.Context, in common.Credentials, s common.Scheme) (common.Principal, error) {
+	scheme, err := v.parseScheme(ctx, s)
+	if err != nil {
+		return common.Principal{}, err
+	}
+
+	clientAssertionInput, header, err := v.parseInput(ctx, in)
+	if err != nil {
+		return common.Principal{}, err
 	}
 
 	return v.verify(ctx, clientAssertionInput, header, scheme)
 }
 
 func (v *ClientAssertionVerifier) VerifyAny(ctx context.Context, in common.Credentials, schemes []common.Scheme) (common.Principal, error) {
-	clientAssertionInput, ok := in.(ClientAssertionCredentials)
-	if !ok {
-		logx.L().Debug("could not cast InputCredentials to ClientAssertionInput", "context", ctx)
-		return common.Principal{}, common.ErrInvalidInput
-	}
-	if clientAssertionInput.ClientAssertion == "" {
-		logx.L().Debug("empty client_assertion", "context", ctx)
-		return common.Principal{}, common.ErrInvalidInput
-	}
-	if clientAssertionInput.ClientAssertionType != URNClientAssertionType {
-		logx.L().Debug(fmt.Sprintf("invalid client_assertion_type: got '%s', want '%s", clientAssertionInput.ClientAssertionType, URNClientAssertionType), "context", ctx)
-		return common.Principal{}, common.ErrInvalidInput
-	}
-
-	headerKid, headerHasKid, headerAlg, err := parseClientAssertionHeader(clientAssertionInput.ClientAssertion)
+	clientAssertionInput, header, err := v.parseInput(ctx, in)
 	if err != nil {
-		logx.L().Debug("could not parse client_assertion token header", "context", ctx, "error", err)
-		return common.Principal{}, common.ErrInvalidInput
-	}
-	header := clientAssertionCredentialsHeader{
-		kid:    headerKid,
-		hasKid: headerHasKid,
-		alg:    headerAlg,
+		return common.Principal{}, err
 	}
 
 	for _, s := range schemes {
-		scheme, ok := s.(ClientAssertionSchemer)
-		if !ok || len(scheme.GetKeys()) == 0 {
+		scheme, err := v.parseScheme(ctx, s)
+		if err != nil {
 			continue
 		}
 		principal, err := v.verify(ctx, clientAssertionInput, header, scheme)
@@ -174,7 +167,7 @@ func buildClientAssertionParserOptions(scheme ClientAssertionSchemer, keyConf si
 	return opts
 }
 
-func parseClientAssertionHeader(token string) (kid string, hasKid bool, alg string, err error) {
+func parseJWTHeader(token string) (kid string, hasKid bool, alg string, err error) {
 	parser := jwt.NewParser()
 	unverifiedToken, _, err := parser.ParseUnverified(token, jwt.MapClaims{})
 	if err != nil || unverifiedToken == nil {
@@ -189,7 +182,7 @@ func parseClientAssertionHeader(token string) (kid string, hasKid bool, alg stri
 	return kid, hasKid, alg, nil
 }
 
-func parseClientAssertion(token string, key crypto.PublicKey, opts []jwt.ParserOption) (*jwt.RegisteredClaims, error) {
+func parseJWT(token string, key crypto.PublicKey, opts []jwt.ParserOption) (*jwt.RegisteredClaims, error) {
 	claims := &jwt.RegisteredClaims{}
 	tok, err := jwt.ParseWithClaims(
 		token,
@@ -200,13 +193,13 @@ func parseClientAssertion(token string, key crypto.PublicKey, opts []jwt.ParserO
 		opts...,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("could not parse client_assertion: %w", err)
+		return nil, fmt.Errorf("could not parse token: %w", err)
 	}
 	if tok == nil {
-		return nil, errors.New("assertion is empty")
+		return nil, errors.New("token is empty")
 	}
 	if !tok.Valid {
-		return nil, errors.New("assertion is invalid")
+		return nil, errors.New("token is invalid")
 	}
 	return claims, nil
 }
