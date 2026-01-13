@@ -1,8 +1,3 @@
-## Usage
-
-### JWT Issue
-
-```golang
 package examples
 
 import (
@@ -33,5 +28,3 @@ func IssueJWT() {
 
 	fmt.Println(accessToken)
 }
-
-```
