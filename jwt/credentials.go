@@ -1,6 +1,8 @@
 package jwt
 
-import "github.com/axent-pl/credentials/common"
+import (
+	"github.com/axent-pl/credentials/common"
+)
 
 type JWTCredentials struct {
 	Token string
