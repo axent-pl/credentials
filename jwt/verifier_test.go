@@ -17,7 +17,7 @@ func TestJWTVerifier_Verify(t *testing.T) {
 	issueParams := jwt.JWTIssueParams{
 		Issuer: "acme-issuer",
 		Exp:    20 * time.Second,
-		Key: sig.SignatureKey{
+		Key: &sig.SignatureKey{
 			Key: rsaKey,
 			Alg: sig.SigAlgRS256,
 		},

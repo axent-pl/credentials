@@ -27,7 +27,7 @@ type ClientAssertionIssueParams struct {
 	Exp time.Duration
 
 	// Signing key material
-	Key sig.SignatureKey
+	Key sig.SignatureKeyer
 
 	// Optional overlay claims (e.g. "nbf", custom claims)
 	OverlayClaims map[string]any
@@ -117,17 +117,17 @@ func (iss *ClientAssertionIssuer) Sign(payload map[string]any, params ClientAsse
 	claims := jwtx.MapClaims{}
 	maps.Copy(claims, payload)
 
-	signingMethod, err := params.Key.Alg.ToGoJWT()
+	signingMethod, err := params.Key.GetAlg().ToGoJWT()
 	if err != nil {
 		return nil, fmt.Errorf("could not sign payload: %w", err)
 	}
 
 	token := jwtx.NewWithClaims(signingMethod, claims)
-	if params.Key.Kid != "" {
-		token.Header["kid"] = params.Key.Kid
+	if params.Key.GetKid() != "" {
+		token.Header["kid"] = params.Key.GetKid()
 	}
 
-	tokenString, err := token.SignedString(params.Key.Key)
+	tokenString, err := token.SignedString(params.Key.GetKey())
 	if err != nil {
 		return nil, fmt.Errorf("could not sign payload: %w", err)
 	}

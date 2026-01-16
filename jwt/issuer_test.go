@@ -243,7 +243,7 @@ func TestJWTIssuer_Sign(t *testing.T) {
 			issueParams: jwt.JWTIssueParams{
 				Issuer: "acme-issuer",
 				Exp:    20 * time.Second,
-				Key: sig.SignatureKey{
+				Key: &sig.SignatureKey{
 					Key: rsaKey2048,
 					Alg: sig.SigAlgRS1,
 				},
@@ -258,7 +258,7 @@ func TestJWTIssuer_Sign(t *testing.T) {
 			issueParams: jwt.JWTIssueParams{
 				Issuer: "acme-issuer",
 				Exp:    20 * time.Second,
-				Key: sig.SignatureKey{
+				Key: &sig.SignatureKey{
 					Key: rsaKey2048,
 					Alg: sig.SigAlgRS256,
 				},
@@ -273,7 +273,7 @@ func TestJWTIssuer_Sign(t *testing.T) {
 			issueParams: jwt.JWTIssueParams{
 				Issuer: "acme-issuer",
 				Exp:    20 * time.Second,
-				Key: sig.SignatureKey{
+				Key: &sig.SignatureKey{
 					Key: rsaKey2048,
 					Alg: sig.SigAlgRS384,
 				},
@@ -288,7 +288,7 @@ func TestJWTIssuer_Sign(t *testing.T) {
 			issueParams: jwt.JWTIssueParams{
 				Issuer: "acme-issuer",
 				Exp:    20 * time.Second,
-				Key: sig.SignatureKey{
+				Key: &sig.SignatureKey{
 					Key: rsaKey2048,
 					Alg: sig.SigAlgRS512,
 				},
@@ -303,7 +303,7 @@ func TestJWTIssuer_Sign(t *testing.T) {
 			issueParams: jwt.JWTIssueParams{
 				Issuer: "acme-issuer",
 				Exp:    20 * time.Second,
-				Key: sig.SignatureKey{
+				Key: &sig.SignatureKey{
 					Key: ecdsaKeyP256,
 					Alg: sig.SigAlgES256,
 				},
@@ -318,7 +318,7 @@ func TestJWTIssuer_Sign(t *testing.T) {
 			issueParams: jwt.JWTIssueParams{
 				Issuer: "acme-issuer",
 				Exp:    20 * time.Second,
-				Key: sig.SignatureKey{
+				Key: &sig.SignatureKey{
 					Key: ecdsaKeyP384,
 					Alg: sig.SigAlgES384,
 				},
@@ -333,7 +333,7 @@ func TestJWTIssuer_Sign(t *testing.T) {
 			issueParams: jwt.JWTIssueParams{
 				Issuer: "acme-issuer",
 				Exp:    20 * time.Second,
-				Key: sig.SignatureKey{
+				Key: &sig.SignatureKey{
 					Key: ecdsaKeyP256,
 					Alg: sig.SigAlgES384,
 				},
@@ -375,7 +375,7 @@ func TestJWTIssuer_Issue(t *testing.T) {
 			issueParams: jwt.JWTIssueParams{
 				Issuer: "acme-issuer",
 				Exp:    20 * time.Second,
-				Key: sig.SignatureKey{
+				Key: &sig.SignatureKey{
 					Key: rsaKey,
 					Alg: sig.SigAlgRS256,
 				},

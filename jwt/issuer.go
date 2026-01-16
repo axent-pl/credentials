@@ -19,7 +19,7 @@ import (
 type JWTIssueParams struct {
 	Issuer string
 	Exp    time.Duration
-	Key    sig.SignatureKey
+	Key    sig.SignatureKeyer
 
 	AuthorizedParty common.SubjectID
 
@@ -35,11 +35,11 @@ func (JWTIssueParams) Kind() common.Kind { return common.JWT }
 
 type JWTIssuer struct{}
 
-var _ common.Issuer = &JWTIssuer{}
+var _ common.Issuer = JWTIssuer{}
 
 func (JWTIssuer) Kind() common.Kind { return common.JWT }
 
-func (iss *JWTIssuer) Issue(ctx context.Context, principal common.Principal, issueParams common.IssueParams) ([]common.Artifact, error) {
+func (iss JWTIssuer) Issue(ctx context.Context, principal common.Principal, issueParams common.IssueParams) ([]common.Artifact, error) {
 	jwtIssueParams, ok := issueParams.(JWTIssueParams)
 	if !ok {
 		logx.L().Debug("could not cast IssueParams to JWTIssueParams", "context", ctx)
@@ -127,28 +127,28 @@ func (iss *JWTIssuer) Issue(ctx context.Context, principal common.Principal, iss
 	return artifacts, nil
 }
 
-func (iss *JWTIssuer) Sign(payload map[string]any, params JWTIssueParams) ([]byte, error) {
+func (iss JWTIssuer) Sign(payload map[string]any, params JWTIssueParams) ([]byte, error) {
 	claims := jwtx.MapClaims{}
 	maps.Copy(claims, payload)
 
-	signingMethod, err := params.Key.Alg.ToGoJWT()
+	signingMethod, err := params.Key.GetAlg().ToGoJWT()
 	if err != nil {
 		return nil, fmt.Errorf("could not sign payload: %w", err)
 	}
 
 	token := jwtx.NewWithClaims(signingMethod, claims)
-	if params.Key.Kid != "" {
-		token.Header["kid"] = params.Key.Kid
+	if params.Key.GetKid() != "" {
+		token.Header["kid"] = params.Key.GetKid()
 	}
 
-	tokenString, err := token.SignedString(params.Key.Key)
+	tokenString, err := token.SignedString(params.Key.GetKey())
 	if err != nil {
 		return nil, fmt.Errorf("could not sign payload: %w", err)
 	}
 	return []byte(tokenString), nil
 }
 
-func (iss *JWTIssuer) PatchedClaims(ctx context.Context, principal common.Principal, baseClaims map[string]any, includedClaims []string, overlayClaims map[string]any) (map[string]any, error) {
+func (iss JWTIssuer) PatchedClaims(ctx context.Context, principal common.Principal, baseClaims map[string]any, includedClaims []string, overlayClaims map[string]any) (map[string]any, error) {
 	// 1) clone baseClaims
 	out := maps.Clone(baseClaims)
 
@@ -173,7 +173,7 @@ func (iss *JWTIssuer) PatchedClaims(ctx context.Context, principal common.Princi
 	return out, nil
 }
 
-func (iss *JWTIssuer) BaseClaims(ctx context.Context, principal common.Principal, issueParams JWTIssueParams) (map[string]any, error) {
+func (iss JWTIssuer) BaseClaims(ctx context.Context, principal common.Principal, issueParams JWTIssueParams) (map[string]any, error) {
 	now := time.Now()
 
 	if issueParams.Exp <= 0 {
