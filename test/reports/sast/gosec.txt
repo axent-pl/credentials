@@ -3,8 +3,8 @@ Results:
 
 Summary:
   Gosec  : dev
-  Files  : 44
-  Lines  : 3477
+  Files  : 45
+  Lines  : 3508
   Nosec  : 1
   Issues : 0
 

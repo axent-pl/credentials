@@ -2,9 +2,11 @@ package userpassword
 
 import "github.com/axent-pl/credentials/common"
 
-type UserPasswordInput struct {
+type UserPasswordCredentials struct {
 	Username string
 	Password string
 }
 
-func (UserPasswordInput) Kind() common.Kind { return common.Password }
+func (UserPasswordCredentials) Kind() common.Kind { return common.Password }
+
+var _ common.Credentials = UserPasswordCredentials{}

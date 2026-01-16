@@ -1,10 +1,6 @@
 package userpassword
 
-import "github.com/axent-pl/credentials/common"
-
-type UserPasswordScheme struct {
-	Username     string
-	PasswordHash []byte
+type UserPasswordSchemer interface {
+	GetUsername() string
+	CompareUsernameAndPassword(username string, password string) error
 }
-
-func (UserPasswordScheme) Kind() common.Kind { return common.Password }

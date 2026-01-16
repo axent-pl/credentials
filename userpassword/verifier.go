@@ -5,7 +5,6 @@ import (
 
 	"github.com/axent-pl/credentials/common"
 	"github.com/axent-pl/credentials/common/logx"
-	"golang.org/x/crypto/bcrypt"
 )
 
 type UserPasswordVerifier struct{}
@@ -14,30 +13,39 @@ var _ common.Verifier = &UserPasswordVerifier{}
 
 func (v *UserPasswordVerifier) Kind() common.Kind { return common.Password }
 
-func (v *UserPasswordVerifier) VerifyAny(ctx context.Context, in common.Credentials, schemes []common.Scheme) (common.Principal, error) {
-	userPasswordInput, ok := in.(UserPasswordInput)
+func (v *UserPasswordVerifier) parseInput(ctx context.Context, in common.Credentials) (UserPasswordCredentials, error) {
+	clientSecretInput, ok := in.(UserPasswordCredentials)
 	if !ok {
-		logx.L().Debug("could not cast InputCredentials to UserPasswordInput", "context", ctx)
-		return common.Principal{}, common.ErrInvalidInput
+		logx.L().Debug("could not cast InputCredentials to UserPasswordCredentials", "context", ctx)
+		return UserPasswordCredentials{}, common.ErrInvalidInput
 	}
-	if userPasswordInput.Username == "" {
+	if clientSecretInput.Username == "" {
 		logx.L().Debug("empty username", "context", ctx)
-		return common.Principal{}, common.ErrInvalidInput
+		return UserPasswordCredentials{}, common.ErrInvalidInput
 	}
-	if userPasswordInput.Password == "" {
+	if clientSecretInput.Password == "" {
 		logx.L().Debug("empty password", "context", ctx)
-		return common.Principal{}, common.ErrInvalidInput
+		return UserPasswordCredentials{}, common.ErrInvalidInput
 	}
+	return clientSecretInput, nil
+}
+
+func (v *UserPasswordVerifier) VerifyAny(ctx context.Context, in common.Credentials, schemes []common.Scheme) (common.Principal, error) {
+	userPasswordInput, err := v.parseInput(ctx, in)
+	if err != nil {
+		return common.Principal{}, err
+	}
+
 	for _, s := range schemes {
-		userPasswordScheme, ok := s.(UserPasswordScheme)
-		if !ok || userPasswordScheme.Username != userPasswordInput.Username {
+		scheme, ok := s.(DefaultUserPasswordScheme)
+		if !ok {
 			continue
 		}
-		if err := bcrypt.CompareHashAndPassword([]byte(userPasswordScheme.PasswordHash), []byte(userPasswordInput.Password)); err != nil {
+		if err := scheme.CompareUsernameAndPassword(userPasswordInput.Username, userPasswordInput.Password); err != nil {
 			continue
 		}
 
-		return common.Principal{Subject: common.SubjectID(userPasswordScheme.Username)}, nil
+		return common.Principal{Subject: common.SubjectID(scheme.Username)}, nil
 	}
 	return common.Principal{}, common.ErrInvalidCredentials
 }
