@@ -52,6 +52,10 @@ type SAMLResponseXML struct {
 	// Identifies the IdP issuing the response, usually an entityID (URI).
 	Issuer *SAMLResponseIssuerXML `xml:"urn:oasis:names:tc:SAML:2.0:assertion Issuer,omitempty"`
 
+	// Signature: Optional.
+	// XML DSig Signature for the response.
+	Signature *SAMLResponseSignatureXML `xml:"http://www.w3.org/2000/09/xmldsig# Signature,omitempty"`
+
 	// Status: Required.
 	// Indicates success or failure of the SSO attempt.
 	Status *SAMLResponseStatusXML `xml:"urn:oasis:names:tc:SAML:2.0:protocol Status,omitempty"`
@@ -112,6 +116,10 @@ type SAMLResponseAssertionXML struct {
 	// Subject information about the principal.
 	Subject *SAMLResponseSubjectXML `xml:"urn:oasis:names:tc:SAML:2.0:assertion Subject,omitempty"`
 
+	// Signature: Optional.
+	// XML DSig Signature for the assertion.
+	Signature *SAMLResponseSignatureXML `xml:"http://www.w3.org/2000/09/xmldsig# Signature,omitempty"`
+
 	// Conditions: Optional.
 	// Constraints on the validity of the assertion (audience, time).
 	Conditions *SAMLResponseConditionsXML `xml:"urn:oasis:names:tc:SAML:2.0:assertion Conditions,omitempty"`
@@ -145,6 +153,88 @@ type SAMLResponseNameIDXML struct {
 	// Value: Required.
 	// Subject identifier value.
 	Value string `xml:",chardata"`
+}
+
+// SAMLResponseSignatureXML represents the XML DSig <Signature> element.
+type SAMLResponseSignatureXML struct {
+	XMLName xml.Name `xml:"http://www.w3.org/2000/09/xmldsig# Signature"`
+
+	// SignedInfo: Required.
+	SignedInfo *SAMLResponseSignedInfoXML `xml:"http://www.w3.org/2000/09/xmldsig# SignedInfo,omitempty"`
+
+	// SignatureValue: Required.
+	SignatureValue string `xml:"http://www.w3.org/2000/09/xmldsig# SignatureValue,omitempty"`
+}
+
+// SAMLResponseSignedInfoXML represents the <SignedInfo> element.
+type SAMLResponseSignedInfoXML struct {
+	XMLName xml.Name `xml:"http://www.w3.org/2000/09/xmldsig# SignedInfo"`
+
+	// CanonicalizationMethod: Required.
+	CanonicalizationMethod *SAMLResponseCanonicalizationMethodXML `xml:"http://www.w3.org/2000/09/xmldsig# CanonicalizationMethod,omitempty"`
+
+	// SignatureMethod: Required.
+	SignatureMethod *SAMLResponseSignatureMethodXML `xml:"http://www.w3.org/2000/09/xmldsig# SignatureMethod,omitempty"`
+
+	// Reference: Optional.
+	Reference *SAMLResponseReferenceXML `xml:"http://www.w3.org/2000/09/xmldsig# Reference,omitempty"`
+}
+
+// SAMLResponseCanonicalizationMethodXML represents the <CanonicalizationMethod> element.
+type SAMLResponseCanonicalizationMethodXML struct {
+	XMLName xml.Name `xml:"http://www.w3.org/2000/09/xmldsig# CanonicalizationMethod"`
+
+	// Algorithm: Required.
+	Algorithm string `xml:"Algorithm,attr"`
+}
+
+// SAMLResponseSignatureMethodXML represents the <SignatureMethod> element.
+type SAMLResponseSignatureMethodXML struct {
+	XMLName xml.Name `xml:"http://www.w3.org/2000/09/xmldsig# SignatureMethod"`
+
+	// Algorithm: Required.
+	Algorithm string `xml:"Algorithm,attr"`
+}
+
+// SAMLResponseReferenceXML represents the <Reference> element.
+type SAMLResponseReferenceXML struct {
+	XMLName xml.Name `xml:"http://www.w3.org/2000/09/xmldsig# Reference"`
+
+	// URI: Optional.
+	URI string `xml:"URI,attr,omitempty"`
+
+	// Transforms: Optional.
+	Transforms *SAMLResponseTransformsXML `xml:"http://www.w3.org/2000/09/xmldsig# Transforms,omitempty"`
+
+	// DigestMethod: Required.
+	DigestMethod *SAMLResponseDigestMethodXML `xml:"http://www.w3.org/2000/09/xmldsig# DigestMethod,omitempty"`
+
+	// DigestValue: Required.
+	DigestValue string `xml:"http://www.w3.org/2000/09/xmldsig# DigestValue,omitempty"`
+}
+
+// SAMLResponseTransformsXML represents the <Transforms> element.
+type SAMLResponseTransformsXML struct {
+	XMLName xml.Name `xml:"http://www.w3.org/2000/09/xmldsig# Transforms"`
+
+	// Transform: Optional.
+	Transform []SAMLResponseTransformXML `xml:"http://www.w3.org/2000/09/xmldsig# Transform,omitempty"`
+}
+
+// SAMLResponseTransformXML represents the <Transform> element.
+type SAMLResponseTransformXML struct {
+	XMLName xml.Name `xml:"http://www.w3.org/2000/09/xmldsig# Transform"`
+
+	// Algorithm: Required.
+	Algorithm string `xml:"Algorithm,attr"`
+}
+
+// SAMLResponseDigestMethodXML represents the <DigestMethod> element.
+type SAMLResponseDigestMethodXML struct {
+	XMLName xml.Name `xml:"http://www.w3.org/2000/09/xmldsig# DigestMethod"`
+
+	// Algorithm: Required.
+	Algorithm string `xml:"Algorithm,attr"`
 }
 
 // SAMLResponseConditionsXML represents the <Conditions> element inside an Assertion.
