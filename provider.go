@@ -16,7 +16,7 @@ type ValidationSchemeProviderSet struct {
 
 func (s *ValidationSchemeProviderSet) ValidationSchemes(ctx context.Context, in common.Credentials) ([]common.Scheme, error) {
 	var lastErr error
-	var schemes []common.Scheme = make([]common.Scheme, 0)
+	schemes := make([]common.Scheme, 0)
 	for _, p := range s.Providers {
 		providerSchemes, err := p.ValidationSchemes(ctx, in)
 		if err == nil {

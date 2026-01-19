@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/axent-pl/credentials/common"
+	"github.com/axent-pl/credentials/common/logx"
 )
 
 // SAMLRequestCredentials represents the HTTP request parameters typically passed
@@ -186,7 +187,11 @@ func (r *SAMLRequestCredentials) UnmarshalSAMLRequest() (*SAMLRequestXML, error)
 
 func (v *SAMLRequestCredentials) inflateRawDeflate(b []byte) ([]byte, error) {
 	r := flate.NewReader(bytes.NewReader(b))
-	defer r.Close()
+	defer func() {
+		if err := r.Close(); err != nil {
+			logx.L().Error("could not close io.RaadCloser")
+		}
+	}()
 	return io.ReadAll(r)
 }
 
@@ -195,7 +200,11 @@ func (v *SAMLRequestCredentials) inflateZlib(b []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer r.Close()
+	defer func() {
+		if err := r.Close(); err != nil {
+			logx.L().Error("could not close io.RaadCloser")
+		}
+	}()
 	return io.ReadAll(r)
 }
 

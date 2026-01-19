@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/axent-pl/credentials/common"
+	"github.com/axent-pl/credentials/common/logx"
 	"github.com/axent-pl/credentials/common/sig"
 )
 
@@ -225,7 +226,11 @@ func (p *JWKSProvider) refresh(ctx context.Context) error {
 			return p.lastErr
 		}
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			logx.L().Error("could not close http.Response.Body")
+		}
+	}()
 
 	switch resp.StatusCode {
 	case http.StatusNotModified:
