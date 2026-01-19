@@ -21,8 +21,8 @@ func TestSAMLRequestVerifier_Verify(t *testing.T) {
 	artifacts, _ := issuer.Issue(context.Background(), common.Principal{}, samlrequest.SAMLRequestIssueParams{
 		Issuer: "https://saml.application.org",
 		Key: &samlrequest.SAMLRequestIssueKey{
-			PrivateKey: rsaKey,
-			HashAlg:    crypto.SHA256,
+			Key: rsaKey,
+			Alg: crypto.SHA256,
 		},
 		Destination: "https://saml.idp.org",
 	})

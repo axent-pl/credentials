@@ -18,8 +18,8 @@ import (
 )
 
 type SAMLRequestIssueKey struct {
-	HashAlg    crypto.Hash
-	PrivateKey crypto.PrivateKey
+	Alg crypto.Hash
+	Key crypto.PrivateKey
 }
 
 type SAMLRequestIssueParams struct {
@@ -88,7 +88,7 @@ func (iss *SAMLRequestIssuer) Issue(ctx context.Context, _ common.Principal, iss
 	// sign if signature key provided in scheme
 	if samlIssueParams.Key != nil {
 		// determine SigAlg
-		sigAlg, err := SAMLSigAlg(samlIssueParams.Key.PrivateKey, samlIssueParams.Key.HashAlg)
+		sigAlg, err := SAMLSigAlg(samlIssueParams.Key.Key, samlIssueParams.Key.Alg)
 		if err != nil {
 			logx.L().Error("could not determine SAMLRequest SigAlg", "context", ctx, "error", err)
 			return nil, common.ErrInternal
@@ -122,19 +122,19 @@ func (iss *SAMLRequestIssuer) Issue(ctx context.Context, _ common.Principal, iss
 }
 
 func (iss *SAMLRequestIssuer) Sign(r SAMLRequestCredentials, key *SAMLRequestIssueKey) (string, error) {
-	_, _ = SAMLSigAlg(key.PrivateKey, key.HashAlg)
+	_, _ = SAMLSigAlg(key.Key, key.Alg)
 	signedData := r.SignedQuery()
-	digest, _ := sig.Hash(signedData, key.HashAlg)
+	digest, _ := sig.Hash(signedData, key.Alg)
 
 	var opts crypto.SignerOpts
-	switch key.PrivateKey.(type) {
+	switch key.Key.(type) {
 	case *rsa.PrivateKey:
-		opts = crypto.SignerOpts(key.HashAlg) // nil vs. hashAlg both OK for RSA in practice; hashAlg carries the hash choice
+		opts = crypto.SignerOpts(key.Alg) // nil vs. hashAlg both OK for RSA in practice; hashAlg carries the hash choice
 	default:
-		opts = key.HashAlg
+		opts = key.Alg
 	}
 
-	signer, ok := key.PrivateKey.(crypto.Signer)
+	signer, ok := key.Key.(crypto.Signer)
 	if !ok {
 		return "", errors.New("could not sign SAML request: key does not implement crypto.Signer")
 	}

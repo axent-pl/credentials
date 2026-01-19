@@ -36,8 +36,8 @@ func TestSAMLRequestIssuer_Issue(t *testing.T) {
 			issueParams: samlrequest.SAMLRequestIssueParams{
 				Issuer: "https://saml.application.org",
 				Key: &samlrequest.SAMLRequestIssueKey{
-					PrivateKey: rsaKey,
-					HashAlg:    crypto.SHA256,
+					Key: rsaKey,
+					Alg: crypto.SHA256,
 				},
 				Destination: "https://saml.idp.org",
 			},
@@ -48,8 +48,8 @@ func TestSAMLRequestIssuer_Issue(t *testing.T) {
 			issueParams: samlrequest.SAMLRequestIssueParams{
 				Issuer: "https://saml.application.org",
 				Key: &samlrequest.SAMLRequestIssueKey{
-					PrivateKey: ecdsaKey,
-					HashAlg:    crypto.SHA256,
+					Key: ecdsaKey,
+					Alg: crypto.SHA256,
 				},
 				Destination: "https://saml.idp.org",
 			},
