@@ -20,13 +20,13 @@ type jwksPayload struct {
 	Keys         []sig.JSONWebKey `json:"keys"`
 }
 
-func (JWKSIssueParams) Kind() common.Kind { return common.JWT }
+func (JWKSIssueParams) Kind() common.Kind { return common.JWKS }
 
 type JWKSIssuer struct{}
 
 var _ common.Issuer = JWKSIssuer{}
 
-func (JWKSIssuer) Kind() common.Kind { return common.JWT }
+func (JWKSIssuer) Kind() common.Kind { return common.JWKS }
 
 func (iss JWKSIssuer) Issue(ctx context.Context, principal common.Principal, issueParams common.IssueParams) ([]common.Artifact, error) {
 	jwksIssueParams, ok := issueParams.(JWKSIssueParams)

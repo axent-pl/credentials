@@ -10,6 +10,7 @@ const (
 	MTLS            Kind = "mtls"
 	SAMLRequest     Kind = "saml_request"
 	SAMLResponse    Kind = "saml_response"
+	JWKS            Kind = "json_web_key_set"
 )
 
 type Credentials interface {
