@@ -20,15 +20,16 @@ import (
 	"github.com/axent-pl/credentials/common"
 	"github.com/axent-pl/credentials/common/logx"
 	"github.com/axent-pl/credentials/common/sig"
+	jwtx "github.com/golang-jwt/jwt/v5"
 )
 
-type JWKSProvider struct {
+type JWKSJWTScheme struct {
 	JWKSURL         url.URL
 	Client          *http.Client  // optional; defaults to http.DefaultClient
 	RefreshInterval time.Duration // RefreshInterval <= 0 disables cache refresh
 
 	mu        sync.RWMutex
-	cached    []common.Scheme
+	cached    *DefaultJWTScheme
 	lastErr   error
 	etag      string
 	lastMod   string
@@ -39,7 +40,10 @@ type JWKSProvider struct {
 	started   bool
 }
 
-func (p *JWKSProvider) Start(ctx context.Context) {
+var _ JWTSchemer = (*JWKSJWTScheme)(nil)
+var _ common.Scheme = (*JWKSJWTScheme)(nil)
+
+func (p *JWKSJWTScheme) Start(ctx context.Context) {
 	p.startOnce.Do(func() {
 		if p.Client == nil {
 			p.Client = http.DefaultClient
@@ -72,7 +76,7 @@ func (p *JWKSProvider) Start(ctx context.Context) {
 	})
 }
 
-func (p *JWKSProvider) Close() {
+func (p *JWKSJWTScheme) Close() {
 	p.stopOnce.Do(func() {
 		if p.started && p.stopCh != nil {
 			close(p.stopCh)
@@ -161,39 +165,94 @@ func JwkToPublicKey(k jwkKey) (crypto.PublicKey, error) {
 	}
 }
 
-// ValidationSchemes returns cached schemes if available.
-// If the cache is empty (first call or previous failures), it performs a synchronous refresh.
-func (p *JWKSProvider) ValidationSchemes(ctx context.Context, in common.Credentials) ([]common.Scheme, error) {
-	// Fast path: serve from cache if primed.
+func (p *JWKSJWTScheme) ensureCache() {
 	p.mu.RLock()
-	if len(p.cached) > 0 {
-		cached := make([]common.Scheme, len(p.cached))
-		copy(cached, p.cached)
-		p.mu.RUnlock()
-		return cached, nil
-	}
+	cached := p.cached
 	p.mu.RUnlock()
-
-	// Cache is empty: fetch synchronously to prime.
-	if err := p.refresh(ctx); err != nil {
-		return nil, err
+	if cached != nil {
+		return
 	}
+	_ = p.refresh(context.Background())
+}
 
+func (p *JWKSJWTScheme) cachedScheme() *DefaultJWTScheme {
+	p.ensureCache()
 	p.mu.RLock()
-	defer p.mu.RUnlock()
-	if len(p.cached) == 0 {
-		if p.lastErr != nil {
-			return nil, p.lastErr
-		}
-		return nil, errors.New("jwks: cache empty after refresh")
+	cached := p.cached
+	p.mu.RUnlock()
+	return cached
+}
+
+func (p *JWKSJWTScheme) Kind() common.Kind { return common.JWT }
+
+func (p *JWKSJWTScheme) GetSubject() common.SubjectID {
+	cached := p.cachedScheme()
+	if cached == nil {
+		return ""
 	}
-	out := make([]common.Scheme, len(p.cached))
-	copy(out, p.cached)
-	return out, nil
+	return cached.GetSubject()
+}
+
+func (p *JWKSJWTScheme) GetMustMatchKid() bool {
+	cached := p.cachedScheme()
+	if cached == nil {
+		return false
+	}
+	return cached.GetMustMatchKid()
+}
+
+func (p *JWKSJWTScheme) GetKeys() []sig.SignatureVerificationKey {
+	cached := p.cachedScheme()
+	if cached == nil || len(cached.Keys) == 0 {
+		return nil
+	}
+	keys := make([]sig.SignatureVerificationKey, len(cached.Keys))
+	copy(keys, cached.Keys)
+	return keys
+}
+
+func (p *JWKSJWTScheme) GetIssuer() string {
+	cached := p.cachedScheme()
+	if cached == nil {
+		return ""
+	}
+	return cached.GetIssuer()
+}
+
+func (p *JWKSJWTScheme) GetAudience() string {
+	cached := p.cachedScheme()
+	if cached == nil {
+		return ""
+	}
+	return cached.GetAudience()
+}
+
+func (p *JWKSJWTScheme) GetLeeway() time.Duration {
+	cached := p.cachedScheme()
+	if cached == nil {
+		return 0
+	}
+	return cached.GetLeeway()
+}
+
+func (p *JWKSJWTScheme) GetReplay() common.ReplayChecker {
+	cached := p.cachedScheme()
+	if cached == nil {
+		return nil
+	}
+	return cached.GetReplay()
+}
+
+func (p *JWKSJWTScheme) ParsePrincipal(claims *jwtx.RegisteredClaims) (common.Principal, error) {
+	cached := p.cachedScheme()
+	if cached != nil {
+		return cached.ParsePrincipal(claims)
+	}
+	return DefaultJWTScheme{}.ParsePrincipal(claims)
 }
 
 // refresh fetches JWKS with conditional headers and updates the cache if changed.
-func (p *JWKSProvider) refresh(ctx context.Context) error {
+func (p *JWKSJWTScheme) refresh(ctx context.Context) error {
 	client := p.Client
 	if client == nil {
 		client = http.DefaultClient
@@ -302,13 +361,12 @@ func (p *JWKSProvider) refresh(ctx context.Context) error {
 		Keys:         keys,
 	}
 
-	// Update cache + validators atomically.
-	newCache := []common.Scheme{scheme}
+	// Update cache atomically.
 	etag := resp.Header.Get("ETag")
 	lastMod := resp.Header.Get("Last-Modified")
 
 	p.mu.Lock()
-	p.cached = newCache
+	p.cached = &scheme
 	p.lastErr = nil
 	p.lastFetch = time.Now()
 	if etag != "" {

@@ -2,15 +2,11 @@ package jwt_test
 
 import (
 	"bytes"
-	"context"
-	"errors"
-	"fmt"
 	"io"
 	"net/http"
 	"net/url"
 	"testing"
 
-	"github.com/axent-pl/credentials/common"
 	"github.com/axent-pl/credentials/jwt"
 )
 
@@ -59,8 +55,12 @@ type roundTripperFunc func(*http.Request) (*http.Response, error)
 
 func (f roundTripperFunc) RoundTrip(r *http.Request) (*http.Response, error) { return f(r) }
 
-func TestJWKSProvider_ValidationSchemes(t *testing.T) {
+func TestJWKSProvider_GetKeys(t *testing.T) {
 	// mock http response
+	origTransport := http.DefaultClient.Transport
+	t.Cleanup(func() {
+		http.DefaultClient.Transport = origTransport
+	})
 	http.DefaultClient.Transport = roundTripperFunc(func(r *http.Request) (*http.Response, error) {
 		return &http.Response{
 			StatusCode: 201,
@@ -69,51 +69,13 @@ func TestJWKSProvider_ValidationSchemes(t *testing.T) {
 			Request:    r,
 		}, nil
 	})
-	tests := []struct {
-		name     string
-		in       common.Credentials
-		wantTest func([]common.Scheme) error
-		wantErr  bool
-	}{
-		{
-			name: "successful execution",
-			in:   jwt.JWTCredentials{Token: "ttt"},
-			wantTest: func(schemes []common.Scheme) error {
-				if len(schemes) < 1 {
-					return errors.New("no schemes")
-				}
-				if len(schemes) != 1 {
-					return fmt.Errorf("want 1 schemes, got %d", len(schemes))
-				}
-				jwtScheme, ok := schemes[0].(jwt.DefaultJWTScheme)
-				if !ok {
-					return errors.New("invalid scheme type, want JWTScheme")
-				}
-				if len(jwtScheme.Keys) != 4 {
-					return fmt.Errorf("invalid number of keys: want 4, got %d", len(jwtScheme.Keys))
-				}
-				return nil
-			},
-			wantErr: false,
-		},
+	var p jwt.JWKSJWTScheme
+	p.JWKSURL = url.URL{Scheme: "https", Host: "jwks.example.com"}
+	keys := p.GetKeys()
+	if len(keys) != 4 {
+		t.Errorf("invalid number of keys: want 4, got %d", len(keys))
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			var p jwt.JWKSProvider
-			p.JWKSURL = url.URL{}
-			got, gotErr := p.ValidationSchemes(context.Background(), tt.in)
-			if gotErr != nil {
-				if !tt.wantErr {
-					t.Errorf("ValidationSchemes() failed: %v", gotErr)
-				}
-				return
-			}
-			if tt.wantErr {
-				t.Fatal("ValidationSchemes() succeeded unexpectedly")
-			}
-			if err := tt.wantTest(got); err != nil {
-				t.Errorf("ValidationSchemes() failed: %v", err)
-			}
-		})
+	if !p.GetMustMatchKid() {
+		t.Errorf("expected MustMatchKid to be true")
 	}
 }
