@@ -22,7 +22,7 @@ sast-golangci-lint:
 		golangci-lint run > $(REPORT_DIR)/golangci-lint.txt
 	@echo "SAST golangci-lint completed"
 
-sast: sast-gosec sast-govulncheck
+sast: sast-gosec sast-govulncheck sast-semgrep sast-golangci-lint
 	@echo "SAST completed"
 
 test:
