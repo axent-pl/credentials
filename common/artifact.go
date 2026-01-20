@@ -14,6 +14,7 @@ const (
 	// #nosec G101
 	ArtifactOAuth2TokenResponse ArtifactKind = "oauth2_token_response"
 	ArtifactSAMLRequestURI      ArtifactKind = "saml_request_uri"
+	ArtifactSAMLResponse        ArtifactKind = "saml_response"
 	ArtifactJSONWebKeySet       ArtifactKind = "json_web_key_set"
 )
 
