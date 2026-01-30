@@ -1,11 +1,11 @@
 package jwt
 
 import (
+	"errors"
 	"time"
 
 	"github.com/axent-pl/credentials/common"
 	"github.com/axent-pl/credentials/common/sig"
-	"github.com/golang-jwt/jwt/v5"
 )
 
 type DefaultJWTScheme struct {
@@ -40,9 +40,14 @@ func (s DefaultJWTScheme) GetLeeway() time.Duration { return s.Leeway }
 
 func (s DefaultJWTScheme) GetReplay() common.ReplayChecker { return s.Replay }
 
-func (s DefaultJWTScheme) ParsePrincipal(claims *jwt.RegisteredClaims) (common.Principal, error) {
+func (s DefaultJWTScheme) ParsePrincipal(claims map[string]any) (common.Principal, error) {
+	subject, ok := claims["sub"].(string)
+	if !ok {
+		return common.Principal{}, errors.New("missing `sub` claim")
+	}
 	principal := common.Principal{
-		Subject: common.SubjectID(claims.Subject),
+		Subject:    common.SubjectID(subject),
+		Attributes: claims,
 	}
 	return principal, nil
 }

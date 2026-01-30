@@ -20,7 +20,6 @@ import (
 	"github.com/axent-pl/credentials/common"
 	"github.com/axent-pl/credentials/common/logx"
 	"github.com/axent-pl/credentials/common/sig"
-	jwtx "github.com/golang-jwt/jwt/v5"
 )
 
 type JWKSJWTScheme struct {
@@ -243,7 +242,7 @@ func (p *JWKSJWTScheme) GetReplay() common.ReplayChecker {
 	return cached.GetReplay()
 }
 
-func (p *JWKSJWTScheme) ParsePrincipal(claims *jwtx.RegisteredClaims) (common.Principal, error) {
+func (p *JWKSJWTScheme) ParsePrincipal(claims map[string]any) (common.Principal, error) {
 	cached := p.cachedScheme()
 	if cached != nil {
 		return cached.ParsePrincipal(claims)

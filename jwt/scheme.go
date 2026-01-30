@@ -5,7 +5,6 @@ import (
 
 	"github.com/axent-pl/credentials/common"
 	"github.com/axent-pl/credentials/common/sig"
-	"github.com/golang-jwt/jwt/v5"
 )
 
 type JWTSchemer interface {
@@ -17,5 +16,5 @@ type JWTSchemer interface {
 	GetAudience() string
 	GetLeeway() time.Duration
 	GetReplay() common.ReplayChecker
-	ParsePrincipal(claims *jwt.RegisteredClaims) (common.Principal, error)
+	ParsePrincipal(claims map[string]any) (common.Principal, error)
 }

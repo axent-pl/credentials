@@ -3,8 +3,11 @@ package jwt
 import (
 	"context"
 	"crypto"
+	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/axent-pl/credentials/common"
 	"github.com/axent-pl/credentials/common/logx"
@@ -52,19 +55,20 @@ func (v *JWTVerifier) verify(ctx context.Context, c JWTCredentials, header jwtCr
 
 	// parse token
 	opts := v.buildParserOptions(scheme, *key)
-	claims, err := parseJWT(c.Token, key.Key, opts)
+	registeredClaims, claims, err := parseJWT(c.Token, key.Key, opts)
 	if err != nil {
 		logx.L().Debug("could not parse JWT", "context", ctx, "error", err)
 		return common.Principal{}, fmt.Errorf("%v: %v", common.ErrInvalidCredentials, err)
 	}
-	if claims.Subject == "" {
+
+	if registeredClaims.Subject == "" {
 		logx.L().Debug("missing `sub`", "context", ctx)
 		return common.Principal{}, fmt.Errorf("%v: missing `sub`", common.ErrInvalidCredentials)
 	}
 
 	// validate replay
-	if scheme.GetReplay() != nil && claims.ID != "" && claims.ExpiresAt != nil {
-		if scheme.GetReplay().Seen(ctx, claims.ID, claims.ExpiresAt.Time) {
+	if scheme.GetReplay() != nil && registeredClaims.ID != "" && registeredClaims.ExpiresAt != nil {
+		if scheme.GetReplay().Seen(ctx, registeredClaims.ID, registeredClaims.ExpiresAt.Time) {
 			logx.L().Debug("already seen", "context", ctx)
 			return common.Principal{}, fmt.Errorf("%v: already seen", common.ErrInvalidCredentials)
 		}
@@ -183,24 +187,48 @@ func (v *JWTVerifier) parseJWTHeader(token string) (kid string, hasKid bool, alg
 	return kid, hasKid, alg, nil
 }
 
-func parseJWT(token string, key crypto.PublicKey, opts []jwtx.ParserOption) (*jwtx.RegisteredClaims, error) {
-	claims := &jwtx.RegisteredClaims{}
+func parseJWT(token string, key crypto.PublicKey, opts []jwtx.ParserOption) (*jwtx.RegisteredClaims, map[string]any, error) {
+	registeredClaims := &jwtx.RegisteredClaims{}
 	tok, err := jwtx.ParseWithClaims(
 		token,
-		claims,
+		registeredClaims,
 		func(t *jwtx.Token) (interface{}, error) {
 			return key, nil
 		},
 		opts...,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("could not parse token: %w", err)
+		return nil, nil, fmt.Errorf("could not parse token: %w", err)
 	}
 	if tok == nil {
-		return nil, errors.New("token is empty")
+		return nil, nil, errors.New("token is empty")
 	}
 	if !tok.Valid {
-		return nil, errors.New("token is invalid")
+		return nil, nil, errors.New("token is invalid")
 	}
+	claims, err := parseJWTClaims(token)
+	if err != nil {
+		return nil, nil, fmt.Errorf("could not parse token: %w", err)
+	}
+	return registeredClaims, claims, nil
+}
+
+func parseJWTClaims(token string) (map[string]any, error) {
+	parts := strings.Split(token, ".")
+	if len(parts) < 2 {
+		return nil, fmt.Errorf("invalid token: not enough parts")
+	}
+
+	payloadPart := parts[1]
+	payloadBytes, err := base64.RawURLEncoding.DecodeString(payloadPart)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode payload: %w", err)
+	}
+
+	var claims map[string]any
+	if err := json.Unmarshal(payloadBytes, &claims); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal claims: %w", err)
+	}
+
 	return claims, nil
 }
